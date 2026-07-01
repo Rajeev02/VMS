@@ -7,6 +7,9 @@ import { VisitorRepository } from '../VisitorRepository';
 import { NotificationService, NotificationChannel } from '../../../core/notifications/NotificationService';
 import { VisitStatus } from '../../../domain/models/enums';
 import Logger from '../../../core/logger/Logger';
+import * as ImagePicker from 'expo-image-picker';
+import { Image, TouchableOpacity, Alert } from 'react-native';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const CreateVisitorScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -17,7 +20,27 @@ export const CreateVisitorScreen = () => {
   const [purpose, setPurpose] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const handleCapturePhoto = async () => {
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission Denied', 'Camera permission is required to capture a photo.');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      setPhotoUri(result.assets[0].uri);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!name || !company) return;
@@ -28,9 +51,10 @@ export const CreateVisitorScreen = () => {
         company,
         phone,
         email,
+        photoUrl: photoUri || undefined // Would upload to Firebase Storage in a real implementation
       }, {
         purpose,
-        hostId: 'host-firebase-id-123', // Real ID logic would go here
+        hostId: 'host-firebase-id-123', 
       });
 
       if (visit.status === VisitStatus.PENDING) {
@@ -94,6 +118,17 @@ export const CreateVisitorScreen = () => {
           multiline
           numberOfLines={3}
         />
+
+        <TouchableOpacity style={styles.photoContainer} onPress={handleCapturePhoto}>
+          {photoUri ? (
+            <Image source={{ uri: photoUri }} style={styles.photo} />
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <Icon name="camera-alt" size={40} color={theme.colors.primary} />
+              <Button mode="text">Capture Visitor Photo</Button>
+            </View>
+          )}
+        </TouchableOpacity>
         
         <Button 
           mode="contained" 
@@ -121,5 +156,25 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 16,
+  },
+  photoContainer: {
+    marginVertical: 16,
+    alignItems: 'center',
+  },
+  photoPlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#CCC',
+    borderStyle: 'dashed',
+  },
+  photo: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
   },
 });

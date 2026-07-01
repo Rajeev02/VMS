@@ -5,10 +5,11 @@ import { Text, useTheme, Button } from 'react-native-paper';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
-// import removed due to package deletion
 import { AppTheme } from '../../../theme/theme';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import Logger from '../../../core/logger/Logger';
+import firestore from '@react-native-firebase/firestore';
+import { VisitStatus } from '../../../domain/models/enums';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const QRScannerScreen = () => {
@@ -54,14 +55,51 @@ export const QRScannerScreen = () => {
       Logger.info(`QR Scanned: ${qrValue}`);
       
       try {
-        const visit = await VisitRepository.getVisitByPassQr(qrValue);
-        if (visit) {
-           navigation.navigate('VisitorDetails', { visitId: visit.id });
-        } else {
-           Alert.alert('Invalid QR Code', 'This pass is not recognized.');
+        const passesSnapshot = await firestore().collection('visitor_passes').where('qrToken', '==', qrValue).limit(1).get();
+        if (passesSnapshot.empty) {
+            throw new Error('Pass not found or invalid.');
         }
-      } catch (e) {
+
+        const passDoc = passesSnapshot.docs[0];
+        const passData = passDoc.data();
+        
+        if (passData.status === 'EXPIRED' || passData.status === 'REVOKED') {
+            throw new Error(`Pass is ${passData.status.toLowerCase()}.`);
+        }
+
+        const visitRef = firestore().collection('visits').doc(passData.visitId);
+
+        await firestore().runTransaction(async (transaction) => {
+            const visitSnap = await transaction.get(visitRef);
+            if (!visitSnap.exists) {
+                throw new Error('Visit record not found.');
+            }
+
+            const visitData = visitSnap.data();
+            if (visitData?.status === VisitStatus.CHECKED_IN) {
+                throw new Error('Visitor is already checked in.');
+            }
+
+            // Execute check-in
+            transaction.update(visitRef, {
+                status: VisitStatus.CHECKED_IN,
+                entryTime: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+            });
+
+            // Update Pass status
+            transaction.update(passDoc.ref, {
+                status: 'CHECKED_IN',
+                updatedAt: new Date().toISOString()
+            });
+        });
+        
+        Alert.alert('Check-In Successful', 'The visitor has been checked in securely.');
+        navigation.navigate('VisitorDetails', { visitId: passData.visitId });
+
+      } catch (e: any) {
         Logger.error('QR Validation failed', e);
+        Alert.alert('Scan Failed', e.message || 'The pass is invalid or expired.');
       } finally {
         setTimeout(() => setProcessing(false), 2000);
       }

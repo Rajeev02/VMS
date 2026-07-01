@@ -1,5 +1,5 @@
 import Logger from '../../core/logger/Logger';
-import { VisitRepository } from '../visitor/VisitRepository';
+import { VisitRepository } from '../../domain/repositories/VisitRepository';
 import { VisitorRepository } from '../visitor/VisitorRepository';
 import { VisitStatus } from '../../domain/models/enums';
 
@@ -25,18 +25,18 @@ export class DashboardRepository {
       const now = new Date();
       const todayString = now.toISOString().split('T')[0];
       
-      const todaysVisits = visits.filter(v => v.expectedEntryTime?.startsWith(todayString));
-      const upcomingVisits = visits.filter(v => v.status === VisitStatus.APPROVED && new Date(v.expectedEntryTime!) > now);
+      const todaysVisits = visits.filter((v: any) => v.expectedEntryTime?.startsWith(todayString));
+      const upcomingVisits = visits.filter((v: any) => v.status === VisitStatus.APPROVED && new Date(v.expectedEntryTime!) > now);
       
       return {
         totalVisitors: visitors.length,
         todaysVisitors: todaysVisits.length,
         upcomingVisits: upcomingVisits.length,
-        pending: visits.filter(v => v.status === VisitStatus.PENDING).length,
-        approved: visits.filter(v => v.status === VisitStatus.APPROVED).length,
-        rejected: visits.filter(v => v.status === VisitStatus.REJECTED).length,
-        checkedIn: visits.filter(v => v.status === VisitStatus.CHECKED_IN).length,
-        checkedOut: visits.filter(v => v.status === VisitStatus.CHECKED_OUT).length,
+        pending: visits.filter((v: any) => v.status === VisitStatus.PENDING).length,
+        approved: visits.filter((v: any) => v.status === VisitStatus.APPROVED).length,
+        rejected: visits.filter((v: any) => v.status === VisitStatus.REJECTED).length,
+        checkedIn: visits.filter((v: any) => v.status === VisitStatus.CHECKED_IN).length,
+        checkedOut: visits.filter((v: any) => v.status === VisitStatus.CHECKED_OUT).length,
       };
     } catch (e) {
       Logger.error(`[DashboardRepository] Error fetching stats`, e);

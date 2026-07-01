@@ -8,7 +8,6 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { NotificationService, NotificationChannel, NotificationPayload } from '../../../core/notifications/NotificationService';
 import { PassStatus } from '../../../domain/models/enums';
-
 import { VisitorPassRepository } from '../../../domain/repositories/VisitorPassRepository';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import { VisitorRepository } from '../VisitorRepository';
@@ -55,21 +54,18 @@ export const DigitalPassScreen = () => {
     fetchPassDetails();
   }, [route.params?.visitId]);
 
-  const handleShare = async (channel: NotificationChannel) => {
-    const payload: NotificationPayload = {
-      title: 'Your Visitor Pass',
-      body: `Hi ${passDetails.name}, here is your secure visitor pass for your visit to ${passDetails.building}. Link: ${passDetails.publicUrl}`,
-      channels: [channel],
-    };
-
-    await NotificationService.send(payload);
-    Alert.alert('Pass Shared', `Pass was successfully sent via ${channel}.`);
+  const handleShare = async (channel: string) => {
+    try {
+      await Share.share({
+        message: `Here is your visitor pass for ${passDetails.building}. Link: ${passDetails.publicUrl}`,
+        url: passDetails.publicUrl,
+        title: 'Visitor Pass'
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Unable to share the pass link.');
+    }
   };
 
-  const handleCopyLink = () => {
-    // React Native clipboard mock
-    Alert.alert('Link Copied', 'Secure pass link copied to clipboard.');
-  };
 
   const isExpired = passDetails?.status === PassStatus.EXPIRED || passDetails?.status === PassStatus.REVOKED;
 
@@ -153,10 +149,10 @@ export const DigitalPassScreen = () => {
           <View style={styles.actionsContainer}>
             <Text style={[styles.shareTitle, { color: '#FFF' }]}>Share Pass</Text>
             <View style={styles.shareRow}>
-              <ShareButton icon="message" label="SMS" onPress={() => handleShare(NotificationChannel.SMS)} />
-              <ShareButton icon="email" label="Email" onPress={() => handleShare(NotificationChannel.EMAIL)} />
-              <ShareButton icon="chat" label="WhatsApp" onPress={() => handleShare(NotificationChannel.WHATSAPP)} />
-              <ShareButton icon="link" label="Copy Link" onPress={handleCopyLink} />
+              <ShareButton icon="message" label="SMS" onPress={() => handleShare('SMS')} />
+              <ShareButton icon="email" label="Email" onPress={() => handleShare('EMAIL')} />
+              <ShareButton icon="chat" label="WhatsApp" onPress={() => handleShare('WHATSAPP')} />
+              <ShareButton icon="share" label="Share..." onPress={() => handleShare('ANY')} />
             </View>
 
             <PrimaryButton 

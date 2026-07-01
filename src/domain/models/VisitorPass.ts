@@ -8,6 +8,11 @@ export interface VisitorPass {
   passId: string; // User friendly ID e.g., "VX-1234"
   qrToken: string; // Secure token for QR generation
   
+  // Fields for web portal compatibility
+  token?: string; 
+  visitorName?: string;
+  hostName?: string;
+  
   status: PassStatus;
   
   validFrom: string; // ISO 8601 DateTime

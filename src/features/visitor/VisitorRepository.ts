@@ -11,6 +11,13 @@ import { VisitorPass } from '../../domain/models/VisitorPass';
 import { VisitStatus, PassStatus } from '../../domain/models/enums';
 
 export class VisitorRepository {
+  private static generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
+  }
+
   private static visitorDS: IVisitorDataSource = new FirebaseVisitorDataSource();
   private static visitDS: IVisitDataSource = new FirebaseVisitDataSource();
   private static passDS: IPassDataSource = new FirebasePassDataSource();
@@ -65,10 +72,14 @@ export class VisitorRepository {
     });
 
     // 3. Generate Pass
+    const secureToken = this.generateUUID();
     const pass = await this.passDS.createPass({
       visitId: visit.id,
-      qrToken: `qr-${visit.id}-${Date.now()}`,
-      publicUrl: `https://visitor.company.com/pass/${visit.id}`,
+      qrToken: secureToken,
+      token: secureToken, // For web portal compatibility
+      visitorName: visitor.name, // For web portal compatibility
+      hostName: "Host", // Fallback, could fetch actual host name if needed
+      publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${secureToken}`,
       status: PassStatus.GENERATED,
     });
 

@@ -8,6 +8,7 @@ export interface Visit {
   purpose: string;
   building?: string;
   floor?: string;
+  vehicleNumber?: string;
   
   status: VisitStatus;
   
