@@ -17,9 +17,9 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
     return {
       id: userCredential.user.uid,
       email: data.email || email,
-      name: data.name,
-      role: data.role,
-      organizationId: data.organizationId,
+      name: data.name || 'Unknown',
+      role: data.role || 'Unknown',
+      organizationId: data.organizationId || 'Unknown',
       permissions: data.permissions || [],
     };
   }
@@ -42,9 +42,9 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
       return {
         id: currentUser.uid,
         email: data.email || currentUser.email,
-        name: data.name,
-        role: data.role,
-        organizationId: data.organizationId,
+        name: data.name || 'Unknown',
+        role: data.role || 'Unknown',
+        organizationId: data.organizationId || 'Unknown',
         permissions: data.permissions || [],
       };
     } catch (error) {
