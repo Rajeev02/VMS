@@ -7,7 +7,7 @@ import { useIsFocused, useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 // import removed due to package deletion
 import { AppTheme } from '../../../theme/theme';
-import { VisitorRepository } from '../../visitor/VisitorRepository';
+import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import Logger from '../../../core/logger/Logger';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 
@@ -54,9 +54,9 @@ export const QRScannerScreen = () => {
       Logger.info(`QR Scanned: ${qrValue}`);
       
       try {
-        const visitor = await VisitorRepository.getVisitorByPassQr(qrValue);
-        if (visitor) {
-           navigation.navigate('CheckIn', { id: visitor.id });
+        const visit = await VisitRepository.getVisitByPassQr(qrValue);
+        if (visit) {
+           navigation.navigate('VisitorDetails', { visitId: visit.id });
         } else {
            Alert.alert('Invalid QR Code', 'This pass is not recognized.');
         }

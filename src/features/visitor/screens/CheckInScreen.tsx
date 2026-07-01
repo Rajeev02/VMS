@@ -74,7 +74,7 @@ export const CheckInScreen = () => {
 
             <View style={[styles.badgeCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
               <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Security Verification</Text>
-              <View style={styles.verificationRow}>
+              <View style={[styles.verificationRow, { backgroundColor: theme.colors.secondary + '20' }]}>
                 <Icon name="check-circle" size={24} color={theme.colors.secondary} />
                 <Text style={[styles.verificationText, { color: theme.custom.colors.textPrimary }]}>ID Verified Successfully</Text>
               </View>
@@ -189,7 +189,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 20,
     padding: 12,
-    backgroundColor: '#F0FDF4', // Light green bg
     borderRadius: 8,
   },
   verificationText: {

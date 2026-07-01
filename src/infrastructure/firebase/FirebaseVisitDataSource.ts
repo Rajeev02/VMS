@@ -11,6 +11,11 @@ export class FirebaseVisitDataSource implements IVisitDataSource {
     return doc.data() as Visit;
   }
 
+  async getAllVisits(): Promise<Visit[]> {
+    const snapshot = await this.collection.orderBy('expectedEntry', 'desc').get();
+    return snapshot.docs.map(doc => doc.data() as Visit);
+  }
+
   async getVisitsByVisitor(visitorId: string): Promise<Visit[]> {
     const snapshot = await this.collection
       .where('visitorId', '==', visitorId)

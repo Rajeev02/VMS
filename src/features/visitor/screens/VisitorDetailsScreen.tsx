@@ -16,6 +16,8 @@ import { VisitorRepository } from '../VisitorRepository';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import { AuditRepository } from '../../../domain/repositories/AuditRepository';
 import { VisitStatus } from '../../../domain/models/enums';
+import { PermissionGuard } from '../../../core/auth/PermissionGuard';
+import { Permissions } from '../../../core/auth/permissions';
 
 export const VisitorDetailsScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -54,6 +56,18 @@ export const VisitorDetailsScreen = () => {
     } catch (error) {
       Logger.error('Failed to fetch visitor details', error);
     } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (newStatus: VisitStatus) => {
+    if (!visit) return;
+    try {
+      setLoading(true);
+      await VisitRepository.updateVisit(visit.id, { status: newStatus });
+      await fetchDetails(); // Refresh details
+    } catch (e) {
+      Logger.error('Failed to update status', e);
       setLoading(false);
     }
   };
@@ -147,6 +161,27 @@ export const VisitorDetailsScreen = () => {
         </View>
 
         <View style={styles.actions}>
+          {visit.status === VisitStatus.PENDING && (
+            <PermissionGuard permission={Permissions.CREATE_PRE_APPROVED}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <SecondaryButton title="Reject" onPress={() => handleUpdateStatus(VisitStatus.REJECTED)} style={{ flex: 1, marginRight: 8, borderColor: theme.custom.colors.warning }} textStyle={{ color: theme.custom.colors.warning }} />
+                <SecondaryButton title="Approve" onPress={() => handleUpdateStatus(VisitStatus.APPROVED)} style={{ flex: 1, marginLeft: 8, backgroundColor: theme.colors.primary }} textStyle={{ color: 'white' }} />
+              </View>
+            </PermissionGuard>
+          )}
+          
+          {visit.status === VisitStatus.APPROVED && (
+            <PermissionGuard permission={Permissions.CHECK_IN}>
+              <SecondaryButton title="Check In Visitor" onPress={() => handleUpdateStatus(VisitStatus.CHECKED_IN)} style={{ marginBottom: 16, backgroundColor: '#10B981' }} textStyle={{ color: 'white' }} />
+            </PermissionGuard>
+          )}
+
+          {visit.status === VisitStatus.CHECKED_IN && (
+            <PermissionGuard permission={Permissions.CHECK_OUT}>
+              <SecondaryButton title="Check Out Visitor" onPress={() => handleUpdateStatus(VisitStatus.CHECKED_OUT)} style={{ marginBottom: 16, backgroundColor: '#F59E0B' }} textStyle={{ color: 'white' }} />
+            </PermissionGuard>
+          )}
+
           <SecondaryButton title="View Digital Pass" onPress={() => navigation.navigate('DigitalPass', { visitId: visit.id })} />
         </View>
       </ScrollView>

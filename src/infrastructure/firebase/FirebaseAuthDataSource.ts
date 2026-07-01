@@ -2,6 +2,7 @@ import { getAuth, signInWithEmailAndPassword, signOut } from '@react-native-fire
 import firestore from '@react-native-firebase/firestore';
 import { AuthUser, IAuthDataSource } from '../../domain/datasources/IAuthDataSource';
 import Logger from '../../core/logger/Logger';
+import { getPermissionsForRole } from '../../core/auth/RoleMappings';
 
 export class FirebaseAuthDataSource implements IAuthDataSource {
   async login(email: string, password: string): Promise<AuthUser> {
@@ -20,7 +21,7 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
       name: data.name || 'Unknown',
       role: data.role || 'Unknown',
       organizationId: data.organizationId || 'Unknown',
-      permissions: data.permissions || [],
+      permissions: getPermissionsForRole(data.role),
     };
   }
 
@@ -45,7 +46,7 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
         name: data.name || 'Unknown',
         role: data.role || 'Unknown',
         organizationId: data.organizationId || 'Unknown',
-        permissions: data.permissions || [],
+        permissions: getPermissionsForRole(data.role),
       };
     } catch (error) {
       Logger.error('Failed to get current user details', error);

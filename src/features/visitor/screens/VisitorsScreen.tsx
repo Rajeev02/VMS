@@ -4,15 +4,15 @@ import { Text, useTheme, ActivityIndicator, FAB } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import { VisitorRepository } from '../VisitorRepository';
-import { Visitor } from '../../../domain/models/Visitor';
+import { VisitorListUseCase, VisitListItem } from '../VisitorListUseCase';
+import { VisitStatus } from '../../../domain/models/enums';
 import { PermissionGuard } from '../../../core/auth/PermissionGuard';
 import { Permissions } from '../../../core/auth/permissions';
 import Logger from '../../../core/logger/Logger';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { StatusBadge } from '../../../components/StatusBadge';
 
-const FilterTabs = ['All', 'Upcoming', 'Checked-In', 'Checked-Out'];
+const FilterTabs = ['All', 'Pending', 'Approved', 'Checked In', 'Checked Out'];
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -20,16 +20,33 @@ export const VisitorsScreen = () => {
   const theme = useTheme<AppTheme>();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const [visitors, setVisitors] = useState<Visitor[]>([]);
+  const [visitors, setVisitors] = useState<VisitListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('All');
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
+  // Read filter from navigation params if provided
+  const routeParams = (navigation.getState().routes.find((r: any) => r.name === 'VisitorsList')?.params as any);
+  useEffect(() => {
+    if (routeParams?.filter) {
+      setActiveTab(routeParams.filter);
+    }
+  }, [routeParams?.filter]);
 
   const fetchVisitors = async () => {
     try {
-      const data = await VisitorRepository.getVisitors();
-      setVisitors(data as any);
+      const data = await VisitorListUseCase.getVisitsWithDetails();
+      setVisitors(data);
     } catch (error) {
       Logger.error('Failed to fetch visitors', error);
     } finally {
@@ -47,7 +64,27 @@ export const VisitorsScreen = () => {
     fetchVisitors();
   }, []);
 
-  const renderItem = ({ item }: { item: any }) => (
+  const filteredVisitors = React.useMemo(() => {
+    return visitors.filter((v) => {
+      // Tab Filtering
+      if (activeTab === 'Pending' && v.status !== VisitStatus.PENDING) return false;
+      if (activeTab === 'Approved' && v.status !== VisitStatus.APPROVED) return false;
+      if (activeTab === 'Checked In' && v.status !== VisitStatus.CHECKED_IN) return false;
+      if (activeTab === 'Checked Out' && v.status !== VisitStatus.CHECKED_OUT) return false;
+      
+      // Search Filtering using debounced query
+      if (debouncedSearchQuery) {
+        const query = debouncedSearchQuery.toLowerCase();
+        const matchesName = v.name?.toLowerCase().includes(query);
+        const matchesPhone = v.phone?.includes(query);
+        const matchesCompany = v.company?.toLowerCase().includes(query);
+        if (!matchesName && !matchesPhone && !matchesCompany) return false;
+      }
+      return true;
+    });
+  }, [visitors, activeTab, debouncedSearchQuery]);
+
+  const renderItem = ({ item }: { item: VisitListItem }) => (
     <TouchableOpacity 
       style={styles.card}
       onPress={() => navigation.navigate('VisitorDetails', { id: item.id })}
@@ -115,7 +152,7 @@ export const VisitorsScreen = () => {
       </View>
 
       <FlashList
-        data={visitors}
+        data={filteredVisitors}
         renderItem={renderItem}
         {...{ estimatedItemSize: 80 }}
         onRefresh={onRefresh}

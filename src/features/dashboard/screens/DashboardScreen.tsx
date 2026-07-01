@@ -12,6 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { VisitorRepository } from '../../visitor/VisitorRepository';
+import { DashboardRepository, DashboardStats } from '../DashboardRepository';
 import { Visitor } from '../../../domain/models/Visitor';
 
 export const DashboardScreen = () => {
@@ -21,9 +22,10 @@ export const DashboardScreen = () => {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   
-  const [stats, setStats] = React.useState([
-    { title: "Total Visitors", count: 0, pending: 0, color: theme.custom.colors.border },
-  ]);
+  const [stats, setStats] = React.useState<DashboardStats>({
+    totalVisitors: 0, todaysVisitors: 0, upcomingVisits: 0,
+    pending: 0, approved: 0, rejected: 0, checkedIn: 0, checkedOut: 0
+  });
   const [recentActivity, setRecentActivity] = React.useState<any[]>([]);
 
   React.useEffect(() => {
@@ -31,11 +33,9 @@ export const DashboardScreen = () => {
       try {
         const visitors = await VisitorRepository.getVisitors();
         setRecentActivity(visitors.slice(0, 5));
-        const active = visitors.filter((v: any) => v.status === 'ACTIVE' || v.status === 'CHECKED_IN').length;
         
-        setStats([{ 
-          title: 'Total', count: visitors.length, pending: active, color: theme.custom.colors.border 
-        }]);
+        const dashboardStats = await DashboardRepository.getStats();
+        setStats(dashboardStats);
       } catch (error) {
         console.error('Failed to load dashboard data', error);
       }
@@ -72,18 +72,38 @@ export const DashboardScreen = () => {
       </View>
 
       <View style={styles.statsContainer}>
-        {stats.map((stat, index) => (
-          <View key={index} style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
-            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>{stat.title}</Text>
-            <View style={styles.statContent}>
-              <Text style={[styles.statCount, { color: theme.custom.colors.textPrimary }]}>{stat.count}</Text>
-              <View style={styles.pendingContainer}>
-                <Text style={[styles.pendingText, { color: theme.custom.colors.warning }]}>Pending</Text>
-                <Text style={[styles.pendingCount, { color: theme.custom.colors.warning }]}>{stat.pending}</Text>
-              </View>
-            </View>
-          </View>
-        ))}
+        <View style={styles.statsRow}>
+          <TouchableOpacity 
+            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
+            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'All' }})}
+          >
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Total</Text>
+            <Text style={[styles.statCount, { color: theme.custom.colors.textPrimary }]}>{stats.totalVisitors}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
+            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Pending' }})}
+          >
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Pending</Text>
+            <Text style={[styles.statCount, { color: theme.custom.colors.warning }]}>{stats.pending}</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.statsRow}>
+          <TouchableOpacity 
+            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
+            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Approved' }})}
+          >
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Approved</Text>
+            <Text style={[styles.statCount, { color: theme.colors.primary }]}>{stats.approved}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
+            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Checked In' }})}
+          >
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Checked In</Text>
+            <Text style={[styles.statCount, { color: theme.colors.primary }]}>{stats.checkedIn}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.section}>
@@ -155,9 +175,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   statsContainer: {
-    flexDirection: 'row',
     paddingHorizontal: 16,
     marginBottom: 24,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
   },
   statCard: {
     flex: 1,
