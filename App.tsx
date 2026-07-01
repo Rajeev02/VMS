@@ -1,20 +1,27 @@
-import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { Provider as ReduxProvider } from 'react-redux';
+import { PaperProvider } from 'react-native-paper';
+import { store } from './src/app/store';
+import { AppLightTheme } from './src/theme/theme';
+import { RootNavigator } from './src/navigation/RootNavigator';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ErrorBoundary } from './src/core/errors/ErrorBoundary';
+import { OfflineManager } from './src/core/network/OfflineManager';
 
 export default function App() {
+  useEffect(() => {
+    OfflineManager.init();
+  }, []);
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <ErrorBoundary>
+      <ReduxProvider store={store}>
+        <PaperProvider theme={AppLightTheme}>
+          <SafeAreaProvider>
+            <RootNavigator />
+          </SafeAreaProvider>
+        </PaperProvider>
+      </ReduxProvider>
+    </ErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
