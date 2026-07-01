@@ -7,6 +7,7 @@ import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { CustomInput } from '../../../components/CustomInput';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
+import { VisitorRepository } from '../VisitorRepository';
 
 export const CheckInScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -14,14 +15,19 @@ export const CheckInScreen = () => {
   const route = useRoute<any>();
   const [badgeNumber, setBadgeNumber] = useState('');
 
-  // Mock visitor data
-  const visitor = {
-    name: 'John Doe',
-    company: 'ABC Technologies',
-    purpose: 'Business Meeting',
-    host: 'Rajeev Joshi',
-    phone: '+91 98765 43210',
-  };
+  const [visitor, setVisitor] = useState<any>(null);
+
+  React.useEffect(() => {
+    const loadVisitor = async () => {
+      if (route.params?.passId) {
+        // Fallback for demo: if we pass passId, use getVisitorById or similar.
+        // Assuming we could fetch visitor by passId. For now we will fetch by QR which matches token.
+        const v = await VisitorRepository.getVisitorByPassQr(route.params.passId);
+        if (v) setVisitor(v);
+      }
+    };
+    loadVisitor();
+  }, [route.params?.passId]);
 
   const handleCheckIn = () => {
     // Navigate back to Dashboard on success for demo
@@ -59,11 +65,11 @@ export const CheckInScreen = () => {
             <View style={[styles.detailsCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
               <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Visitor Details</Text>
               
-              <DetailRow label="Name" value={visitor.name} theme={theme} />
-              <DetailRow label="Company" value={visitor.company} theme={theme} />
-              <DetailRow label="Phone" value={visitor.phone} theme={theme} />
-              <DetailRow label="Purpose" value={visitor.purpose} theme={theme} />
-              <DetailRow label="Host" value={visitor.host} theme={theme} />
+              <DetailRow label="Name" value={visitor?.name || ''} theme={theme} />
+              <DetailRow label="Company" value={visitor?.company || ''} theme={theme} />
+              <DetailRow label="Phone" value={visitor?.phone || ''} theme={theme} />
+              <DetailRow label="Email" value={visitor?.email || ''} theme={theme} />
+              <DetailRow label="ID" value={visitor?.id || ''} theme={theme} />
             </View>
 
             <View style={[styles.badgeCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>

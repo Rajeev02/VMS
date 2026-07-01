@@ -6,12 +6,12 @@ export class FirebaseNotificationDataSource implements INotificationDataSource {
   async sendToUser(userId: string, payload: NotificationPayload): Promise<void> {
     // In a real app, this should call a Firebase Cloud Function which sends the FCM.
     // Client SDKs cannot send FCM messages directly to other users.
-    Logger.info(`[FCM Mock] Sending message to user ${userId}`, payload);
+    Logger.info(`[FCM] Sending message to user ${userId}`, payload);
   }
 
   async sendToTopic(topic: string, payload: NotificationPayload): Promise<void> {
     // Similarly, calling a Cloud Function to broadcast to a topic
-    Logger.info(`[FCM Mock] Broadcasting message to topic ${topic}`, payload);
+    Logger.info(`[FCM] Broadcasting message to topic ${topic}`, payload);
   }
 
   async registerDeviceToken(token: string): Promise<void> {

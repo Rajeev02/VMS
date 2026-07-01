@@ -4,7 +4,7 @@ import { TextInput, Button, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
 import { VisitorRepository } from '../VisitorRepository';
-import { MockNotificationService } from '../../../core/notifications/MockNotificationService';
+import { NotificationService, NotificationChannel } from '../../../core/notifications/NotificationService';
 import { VisitStatus } from '../../../domain/models/enums';
 import Logger from '../../../core/logger/Logger';
 
@@ -30,11 +30,16 @@ export const CreateVisitorScreen = () => {
         email,
       }, {
         purpose,
-        hostId: '1', // Mock host ID
+        hostId: 'host-firebase-id-123', // Real ID logic would go here
       });
 
       if (visit.status === VisitStatus.PENDING) {
-         MockNotificationService.notifyHostApprovalRequired(visit.hostId, visitor.name);
+         await NotificationService.send({
+           title: 'Host Approval Required',
+           body: `${visitor.name} is waiting for your approval.`,
+           channels: [NotificationChannel.PUSH, NotificationChannel.IN_APP],
+           data: { visitId: visit.id }
+         });
          Logger.info('Host approval requested for Walk-In');
       }
 

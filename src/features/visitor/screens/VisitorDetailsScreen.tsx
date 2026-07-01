@@ -75,17 +75,11 @@ export const VisitorDetailsScreen = () => {
     );
   }
 
-  // Fallback mock timeline if audit logs are empty for demo purposes
-  const timelineEvents = auditLogs.length > 0 ? auditLogs.map(log => ({
+  const timelineEvents = auditLogs.map(log => ({
     title: log.action.replace('_', ' '),
     time: new Date(log.timestamp).toLocaleString(),
     isCompleted: true
-  })) : [
-    { title: 'Visit Scheduled', time: new Date(visit.createdAt).toLocaleString(), isCompleted: true },
-    { title: 'Pass Generated', time: new Date(visit.createdAt).toLocaleString(), isCompleted: true },
-    { title: 'Checked-In', time: visit.entryTime ? new Date(visit.entryTime).toLocaleString() : 'Pending', isCompleted: !!visit.entryTime },
-    { title: 'Checked-Out', time: visit.actualExitTime ? new Date(visit.actualExitTime).toLocaleString() : 'Pending', isCompleted: !!visit.actualExitTime }
-  ];
+  }));
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.custom.colors.background }}>

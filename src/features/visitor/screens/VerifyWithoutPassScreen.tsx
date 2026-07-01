@@ -52,8 +52,7 @@ export const VerifyWithoutPassScreen = () => {
       if (visitor) {
         // Find their active visit
         const visits = await VisitRepository.getVisitsByVisitor(visitor.id);
-        const activeVisit = visits[0]; // simplistic mock for active visit
-        
+        const activeVisit = visits.find(v => v.status === 'PENDING' || v.status === 'CHECKED_IN') || visits[0];
         if (activeVisit) {
           const pass = await VisitorPassRepository.getByVisitId(activeVisit.id);
           setResult({ visitor, visit: activeVisit, pass });

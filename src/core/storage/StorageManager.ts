@@ -1,5 +1,5 @@
 import { IStorageProvider } from './providers/IStorageProvider';
-import { MockFirebaseProvider } from './providers/MockFirebaseProvider';
+import { FirebaseStorageProvider } from './providers/FirebaseStorageProvider';
 
 /**
  * StorageManager is a Singleton that manages the active storage provider.
@@ -10,9 +10,7 @@ class StorageManager {
   private provider: IStorageProvider;
 
   private constructor() {
-    // Inject mock by default for this assignment. 
-    // Can switch to Supabase/REST via env config.
-    this.provider = new MockFirebaseProvider();
+    this.provider = new FirebaseStorageProvider();
   }
 
   public static getInstance(): StorageManager {

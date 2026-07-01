@@ -5,6 +5,7 @@ import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
+import { VisitorRepository } from '../VisitorRepository';
 
 export const CheckOutScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -12,13 +13,17 @@ export const CheckOutScreen = () => {
   const route = useRoute<any>();
   const [badgeCollected, setBadgeCollected] = useState(false);
 
-  // Mock visitor data
-  const visitor = {
-    name: 'John Doe',
-    company: 'ABC Technologies',
-    purpose: 'Business Meeting',
-    checkInTime: '10:05 AM',
-  };
+  const [visitor, setVisitor] = useState<any>(null);
+
+  React.useEffect(() => {
+    const loadVisitor = async () => {
+      if (route.params?.passId) {
+        const v = await VisitorRepository.getVisitorByPassQr(route.params.passId);
+        if (v) setVisitor(v);
+      }
+    };
+    loadVisitor();
+  }, [route.params?.passId]);
 
   const handleCheckOut = () => {
     // Navigate back to Dashboard on success for demo
@@ -45,10 +50,10 @@ export const CheckOutScreen = () => {
           <View style={[styles.detailsCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
             <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Visitor Summary</Text>
             
-            <DetailRow label="Name" value={visitor.name} theme={theme} />
-            <DetailRow label="Company" value={visitor.company} theme={theme} />
-            <DetailRow label="Purpose" value={visitor.purpose} theme={theme} />
-            <DetailRow label="Checked-In At" value={visitor.checkInTime} theme={theme} />
+            <DetailRow label="Name" value={visitor?.name || ''} theme={theme} />
+            <DetailRow label="Company" value={visitor?.company || ''} theme={theme} />
+            <DetailRow label="ID" value={visitor?.id || ''} theme={theme} />
+            <DetailRow label="Status" value={visitor?.status || ''} theme={theme} />
           </View>
 
           <View style={[styles.badgeCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>

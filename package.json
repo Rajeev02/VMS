@@ -33,7 +33,10 @@
     "react-redux": "^9.3.0"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.5.0",
     "@types/jest": "^30.0.0",
+    "@types/module-alias": "^2.0.4",
+    "@types/node": "^26.1.0",
     "@types/react": "~19.2.2",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
@@ -43,6 +46,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-native": "^5.0.0",
     "firebase-admin": "^14.1.0",
+    "module-alias": "^2.3.4",
     "patch-package": "^8.0.1",
     "prettier": "^3.9.4",
     "ts-node": "^10.9.2",
@@ -53,6 +57,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "seed": "npx ts-node src/scripts/seedDatabase.ts",
     "select-ios-device": "expo run:ios --device",
     "postinstall": "patch-package"
   },

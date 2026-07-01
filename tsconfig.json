@@ -7,6 +7,13 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "types": ["jest"]
+    "types": ["jest"],
+    "experimentalDecorators": true
+  },
+  "ts-node": {
+    "compilerOptions": {
+      "module": "commonjs",
+      "types": ["node"]
+    }
   }
 }

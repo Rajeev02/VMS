@@ -11,6 +11,23 @@ Firebase is isolated in the Infrastructure layer. The application never imports 
 ## Offline First Architecture
 We utilize Firestore Offline Persistence and a custom `OfflineManager/SyncQueue` to ensure Front Desk Security operations continue uninterrupted during network outages.
 
+## Demo Credentials
+To test the different user flows in the application, the database is pre-seeded with the following test accounts. The password for **all** accounts is `password`.
+
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | `superadmin@vms.com` | `password` |
+| Company Admin | `companyadmin@vms.com` | `password` |
+| Receptionist | `receptionist@vms.com` | `password` |
+| Security Guard | `security@vms.com` | `password` |
+| Host | `host@vms.com` | `password` |
+| Standard Employee | `employee@vms.com` | `password` |
+
+To apply these accounts to your local Firebase environment, run the database seeder:
+```bash
+npm run seed
+```
+
 ## Architecture Decisions
 
 1. **Strict Entity Separation (Visitor, Visit, Visitor Pass)**

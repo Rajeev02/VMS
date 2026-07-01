@@ -11,18 +11,38 @@ import { useNavigation } from '@react-navigation/native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { VisitorRepository } from '../../visitor/VisitorRepository';
+import { Visitor } from '../../../domain/models/Visitor';
+
 export const DashboardScreen = () => {
   const theme = useTheme<AppTheme>();
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  
+  const [stats, setStats] = React.useState([
+    { title: "Total Visitors", count: 0, pending: 0, color: theme.custom.colors.border },
+  ]);
+  const [recentActivity, setRecentActivity] = React.useState<any[]>([]);
 
-  // Mock data for the UI
-  const stats = [
-    { title: "Today's Visitors", count: 32, pending: 18, color: theme.custom.colors.border },
-    { title: "Checked-in", count: 12, pending: 2, color: theme.custom.colors.border },
-  ];
+  React.useEffect(() => {
+    const loadDashboardData = async () => {
+      try {
+        const visitors = await VisitorRepository.getVisitors();
+        setRecentActivity(visitors.slice(0, 5));
+        const active = visitors.filter((v: any) => v.status === 'ACTIVE' || v.status === 'CHECKED_IN').length;
+        
+        setStats([{ 
+          title: 'Total', count: visitors.length, pending: active, color: theme.custom.colors.border 
+        }]);
+      } catch (error) {
+        console.error('Failed to load dashboard data', error);
+      }
+    };
+    
+    loadDashboardData();
+  }, [theme]);
 
   const canScanQR = user ? hasPermission(user.permissions, Permissions.SCAN_QR) : false;
   const canRegisterWalkIn = user ? hasPermission(user.permissions, Permissions.REGISTER_WALK_IN) : false;
@@ -32,12 +52,6 @@ export const DashboardScreen = () => {
     ...(canScanQR ? [{ id: 1, title: 'Scan QR', icon: 'qr-code-scanner', color: '#10B981', action: () => navigation.navigate('Activity') }] : []),
     ...(canRegisterWalkIn ? [{ id: 2, title: 'Walk-in Registration', icon: 'person-add', color: '#3B82F6', action: () => navigation.navigate('WalkInRegistration') }] : []),
     ...(canManualVerify ? [{ id: 3, title: 'Verify Without Pass', icon: 'search', color: '#F59E0B', action: () => navigation.navigate('VerifyWithoutPass') }] : []),
-  ];
-
-  const recentActivity = [
-    { id: 1, name: 'John Doe', status: 'Checked-in', time: '09:15 AM' },
-    { id: 2, name: 'Mike Smith', status: 'Checked-in', time: '10:30 AM' },
-    { id: 3, name: 'Sarah Wilson', status: 'Pending', time: '11:00 AM' },
   ];
 
   return (

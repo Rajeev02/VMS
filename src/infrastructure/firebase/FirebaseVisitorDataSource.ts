@@ -11,6 +11,11 @@ export class FirebaseVisitorDataSource implements IVisitorDataSource {
     return doc.data() as Visitor;
   }
 
+  async getAllVisitors(): Promise<Visitor[]> {
+    const snapshot = await this.collection.orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => doc.data() as Visitor);
+  }
+
   async searchVisitors(query: string): Promise<Visitor[]> {
     // Basic search on multiple fields using multiple queries
     // In production with large datasets, Algolia or Typesense might be needed.

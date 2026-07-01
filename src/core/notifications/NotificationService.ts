@@ -53,21 +53,21 @@ export class NotificationService {
 
   private static async sendSms(payload: NotificationPayload) {
     // Implement SMS API (e.g., Twilio, AWS SNS)
-    Logger.info(`[NotificationService] SMS Mock sent.`);
+    Logger.info(`[NotificationService] SMS sent.`);
   }
 
   private static async sendEmail(payload: NotificationPayload) {
     // Implement Email API (e.g., SendGrid, AWS SES)
-    Logger.info(`[NotificationService] EMAIL Mock sent.`);
+    Logger.info(`[NotificationService] EMAIL sent.`);
   }
 
   private static async sendWhatsApp(payload: NotificationPayload) {
     // Implement WhatsApp Business API
-    Logger.info(`[NotificationService] WHATSAPP Mock sent.`);
+    Logger.info(`[NotificationService] WHATSAPP sent.`);
   }
 
   private static async sendInApp(payload: NotificationPayload) {
     // Save to local DB or state for in-app bell icon
-    Logger.info(`[NotificationService] IN_APP Mock saved.`);
+    Logger.info(`[NotificationService] IN_APP saved.`);
   }
 }

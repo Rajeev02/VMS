@@ -10,7 +10,11 @@ export enum LogLevel {
   ERROR = 3,
 }
 
-const CURRENT_LOG_LEVEL = __DEV__ ? LogLevel.DEBUG : LogLevel.WARN;
+// Define __DEV__ for Node environments
+declare const __DEV__: boolean;
+const isDev = typeof __DEV__ !== 'undefined' ? __DEV__ : process.env.NODE_ENV !== 'production';
+
+const CURRENT_LOG_LEVEL = isDev ? LogLevel.DEBUG : LogLevel.WARN;
 
 class Logger {
   static debug(message: string, ...optionalParams: any[]) {

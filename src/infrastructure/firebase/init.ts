@@ -1,5 +1,5 @@
 import firestore from '@react-native-firebase/firestore';
-import auth from '@react-native-firebase/auth';
+
 
 /**
  * Configure Firebase to connect to the local emulators during development.

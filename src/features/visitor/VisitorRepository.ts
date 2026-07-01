@@ -17,8 +17,10 @@ export class VisitorRepository {
 
   static async getVisitors(): Promise<Visitor[]> {
     Logger.info(`[VisitorRepository] getVisitors`);
-    // Ideally we would have a getAll or paginate on visitorDS.
-    // For now, returning an empty list as we load them per-visit.
+    // Need to cast since IVisitorDataSource might not have getAllVisitors yet
+    if ('getAllVisitors' in this.visitorDS) {
+      return await (this.visitorDS as any).getAllVisitors();
+    }
     return [];
   }
 
@@ -75,6 +77,10 @@ export class VisitorRepository {
 
   static async updateVisitor(id: string, updates: Partial<Visitor>): Promise<Visitor> {
     return await this.visitorDS.updateVisitor(id, updates);
+  }
+
+  static async createVisitor(visitor: Partial<Visitor>): Promise<Visitor> {
+    return await this.visitorDS.createVisitor(visitor);
   }
 }
 

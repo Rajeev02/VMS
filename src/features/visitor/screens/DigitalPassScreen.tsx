@@ -9,27 +9,51 @@ import { SecondaryButton } from '../../../components/SecondaryButton';
 import { NotificationService, NotificationChannel, NotificationPayload } from '../../../core/notifications/NotificationService';
 import { PassStatus } from '../../../domain/models/enums';
 
+import { VisitorPassRepository } from '../../../domain/repositories/VisitorPassRepository';
+import { VisitRepository } from '../../../domain/repositories/VisitRepository';
+import { VisitorRepository } from '../VisitorRepository';
+import { useRoute } from '@react-navigation/native';
+
 export const DigitalPassScreen = () => {
   const theme = useTheme<AppTheme>();
   const navigation = useNavigation<any>();
+  const route = useRoute<any>();
 
-  // In reality, this data would come from the repository based on route.params.passId
-  const [passDetails] = useState({
-    name: 'John Doe',
-    company: 'ABC Technologies',
-    host: 'Rajeev Joshi',
-    building: 'Headquarters',
-    floor: 'Floor 3',
-    purpose: 'System Integration Meeting',
-    validFrom: '12 Jul 2024, 09:00 AM',
-    validUntil: '12 Jul 2024, 05:00 PM',
-    expectedExitTime: '05:00 PM',
-    passId: 'VX-240712-0001',
-    qrToken: 'SECURE_QR_TOKEN_ABC123',
-    status: PassStatus.GENERATED,
-    instructions: 'Please bring a valid Government ID.',
-    publicUrl: 'https://vms.example.com/pass/VX-240712-0001', // Deep link ready
-  });
+  const [passDetails, setPassDetails] = useState<any>(null);
+
+  React.useEffect(() => {
+    const fetchPassDetails = async () => {
+      if (route.params?.visitId) {
+        try {
+          const pass = await VisitorPassRepository.getByVisitId(route.params.visitId);
+          if (pass) {
+            const visit = await VisitRepository.getById(route.params.visitId);
+            const visitor = await VisitorRepository.getVisitorById(visit?.visitorId || '');
+            
+            setPassDetails({
+              name: visitor?.name,
+              company: visitor?.company,
+              host: visit?.hostId,
+              building: 'Headquarters', // Usually dynamic based on location
+              floor: 'Main Floor',
+              purpose: visit?.purpose,
+              validFrom: new Date(visit?.scheduledDate || Date.now()).toLocaleString(),
+              validUntil: pass.validUntil ? new Date(pass.validUntil).toLocaleString() : 'N/A',
+              expectedExitTime: '05:00 PM',
+              passId: pass.passId,
+              qrToken: pass.qrToken,
+              status: pass.status,
+              instructions: pass.instructions || 'Please bring a valid Government ID.',
+              publicUrl: pass.publicUrl,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch pass details', error);
+        }
+      }
+    };
+    fetchPassDetails();
+  }, [route.params?.visitId]);
 
   const handleShare = async (channel: NotificationChannel) => {
     const payload: NotificationPayload = {
@@ -47,7 +71,15 @@ export const DigitalPassScreen = () => {
     Alert.alert('Link Copied', 'Secure pass link copied to clipboard.');
   };
 
-  const isExpired = passDetails.status === PassStatus.EXPIRED || passDetails.status === PassStatus.REVOKED;
+  const isExpired = passDetails?.status === PassStatus.EXPIRED || passDetails?.status === PassStatus.REVOKED;
+
+  if (!passDetails) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.primary, justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{ color: '#FFF' }}>Loading Pass Details...</Text>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.primary }]}>

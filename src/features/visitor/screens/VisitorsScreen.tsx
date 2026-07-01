@@ -29,22 +29,7 @@ export const VisitorsScreen = () => {
   const fetchVisitors = async () => {
     try {
       const data = await VisitorRepository.getVisitors();
-      // For demo purposes, we will mock the status fields so the UI looks like the design
-      const mockedData = data.map((v, i) => {
-        let status = 'Approved';
-        if (i === 1) status = 'Upcoming';
-        if (i === 2) status = 'Pending';
-        if (i === 3) status = 'Cancelled';
-        if (i === 4) status = 'Approved';
-        
-        return {
-          ...v,
-          status,
-          date: '12 Jul 2024',
-          time: '10:00 AM'
-        };
-      });
-      setVisitors(mockedData as any);
+      setVisitors(data as any);
     } catch (error) {
       Logger.error('Failed to fetch visitors', error);
     } finally {
