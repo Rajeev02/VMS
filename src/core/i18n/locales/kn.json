@@ -1,0 +1,28 @@
+{
+  "common": {
+    "welcome": "VMS ಗೆ ಸ್ವಾಗತ",
+    "login": "ಲಾಗಿನ್",
+    "logout": "ಲಾಗ್ ಔಟ್",
+    "search": "ಹುಡುಕಾಟ",
+    "submit": "ಸಲ್ಲಿಸು",
+    "cancel": "ರದ್ದುಮಾಡು",
+    "loading": "ಲೋಡ್ ಆಗುತ್ತಿದೆ...",
+    "error": "ದೋಷ ಸಂಭವಿಸಿದೆ"
+  },
+  "dashboard": {
+    "title": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "todaysVisitors": "ಇಂದಿನ ಸಂದರ್ಶಕರು",
+    "pending": "ಬಾಕಿ ಉಳಿದಿದೆ",
+    "checkedIn": "ಚೆಕ್-ಇನ್",
+    "checkedOut": "ಚೆಕ್-ಔಟ್"
+  },
+  "visitor": {
+    "pass": "ಸಂದರ್ಶಕರ ಪಾಸ್",
+    "name": "ಹೆಸರು",
+    "company": "ಕಂಪನಿ",
+    "purpose": "ಉದ್ದೇಶ",
+    "host": "ಆತಿಥೇಯ",
+    "checkIn": "ಚೆಕ್-ಇನ್",
+    "checkOut": "ಚೆಕ್-ಔಟ್"
+  }
+}

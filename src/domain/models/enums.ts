@@ -1,0 +1,49 @@
+export enum VisitorStatus {
+  ACTIVE = 'ACTIVE',
+  BLOCKED = 'BLOCKED',
+  ARCHIVED = 'ARCHIVED',
+  BLACKLISTED = 'BLACKLISTED',
+}
+
+export enum VisitStatus {
+  DRAFT = 'DRAFT',
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  CHECKED_IN = 'CHECKED_IN',
+  CHECKED_OUT = 'CHECKED_OUT',
+  COMPLETED = 'COMPLETED',
+  CANCELLED = 'CANCELLED',
+  EXPIRED = 'EXPIRED',
+  REJECTED = 'REJECTED',
+  NO_SHOW = 'NO_SHOW',
+}
+
+export enum PassStatus {
+  GENERATED = 'GENERATED',
+  SENT = 'SENT',
+  VIEWED = 'VIEWED',
+  SCANNED = 'SCANNED',
+  VERIFIED = 'VERIFIED',
+  EXPIRED = 'EXPIRED',
+  REVOKED = 'REVOKED',
+}
+
+export enum VerificationMethod {
+  QR = 'QR',
+  PASS_ID = 'PASS_ID',
+  MOBILE = 'MOBILE',
+  EMAIL = 'EMAIL',
+  NAME = 'NAME',
+  GOV_ID = 'GOV_ID',
+}
+
+export enum AuditAction {
+  CREATE = 'CREATE',
+  UPDATE = 'UPDATE',
+  DELETE = 'DELETE',
+  LOGIN = 'LOGIN',
+  LOGOUT = 'LOGOUT',
+  VERIFY = 'VERIFY',
+  CHECK_IN = 'CHECK_IN',
+  CHECK_OUT = 'CHECK_OUT',
+}

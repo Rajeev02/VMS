@@ -1,44 +1,55 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { Text, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import { Visitor, VisitorRepository } from '../VisitorRepository';
 import Logger from '../../../core/logger/Logger';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 
+// Domain Models & Repositories
+import { Visitor } from '../../../domain/models/Visitor';
+import { Visit } from '../../../domain/models/Visit';
+import { AuditLog } from '../../../domain/models/AuditLog';
+import { VisitorRepository } from '../../../domain/repositories/VisitorRepository';
+import { VisitRepository } from '../../../domain/repositories/VisitRepository';
+import { AuditRepository } from '../../../domain/repositories/AuditRepository';
+import { VisitStatus } from '../../../domain/models/enums';
+
 export const VisitorDetailsScreen = () => {
   const theme = useTheme<AppTheme>();
   const route = useRoute<any>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<any>();
+  
   const [visitor, setVisitor] = useState<Visitor | null>(null);
+  const [visit, setVisit] = useState<Visit | null>(null);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   
   useEffect(() => {
-    fetchVisitor();
-  }, [route.params?.id]);
+    fetchDetails();
+  }, [route.params?.visitId]);
 
-  const fetchVisitor = async () => {
+  const fetchDetails = async () => {
     try {
-      if (route.params?.id) {
-        const data = await VisitorRepository.getVisitorById(route.params.id);
-        // Mock data to match UI exactly
-        setVisitor({
-          ...data,
-          name: 'John Doe',
-          company: 'ABC Technologies Pvt Ltd',
-          purpose: 'Business Meeting',
-          host: 'Rajeev Joshi',
-          date: '12 Jul 2024',
-          time: '10:00 AM',
-          validUntil: '12 Jul 2024, 05:00 PM',
-          passId: 'VX-240712-0001',
-          phone: '+91 98765 43210',
-          email: 'john.doe@example.com',
-          status: 'Approved'
-        } as any);
+      if (route.params?.visitId) {
+        // Fetch Visit
+        const currentVisit = await VisitRepository.getById(route.params.visitId);
+        if (currentVisit) {
+          setVisit(currentVisit);
+          
+          // Fetch Visitor
+          const currentVisitor = await VisitorRepository.getById(currentVisit.visitorId);
+          if (currentVisitor) {
+            setVisitor(currentVisitor);
+          }
+          
+          // Fetch Audit Logs for Timeline (Mock filter for this specific visit)
+          const logs = await AuditRepository.getLogsForEntity('VISIT', currentVisit.id);
+          // Sort ascending for timeline display
+          setAuditLogs(logs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
+        }
       }
     } catch (error) {
       Logger.error('Failed to fetch visitor details', error);
@@ -55,63 +66,86 @@ export const VisitorDetailsScreen = () => {
     );
   }
 
-  if (!visitor) {
+  if (!visitor || !visit) {
     return (
       <View style={[styles.center, { backgroundColor: theme.custom.colors.background }]}>
-        <Text style={{ color: theme.custom.colors.textPrimary }}>Visitor not found</Text>
+        <Text style={{ color: theme.custom.colors.textPrimary }}>Visit Record Not Found</Text>
+        <SecondaryButton title="Go Back" onPress={() => navigation.goBack()} style={{ marginTop: 16 }} />
       </View>
     );
   }
 
+  // Fallback mock timeline if audit logs are empty for demo purposes
+  const timelineEvents = auditLogs.length > 0 ? auditLogs.map(log => ({
+    title: log.action.replace('_', ' '),
+    time: new Date(log.timestamp).toLocaleString(),
+    isCompleted: true
+  })) : [
+    { title: 'Visit Scheduled', time: new Date(visit.createdAt).toLocaleString(), isCompleted: true },
+    { title: 'Pass Generated', time: new Date(visit.createdAt).toLocaleString(), isCompleted: true },
+    { title: 'Checked-In', time: visit.entryTime ? new Date(visit.entryTime).toLocaleString() : 'Pending', isCompleted: !!visit.entryTime },
+    { title: 'Checked-Out', time: visit.actualExitTime ? new Date(visit.actualExitTime).toLocaleString() : 'Pending', isCompleted: !!visit.actualExitTime }
+  ];
+
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.custom.colors.background }]}>
-      <View style={styles.header}>
-        <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
-          <Icon name="person" size={40} color={theme.colors.primary} />
-        </View>
-        <Text style={[styles.visitorName, { color: theme.custom.colors.textPrimary }]}>{visitor.name}</Text>
-        <Text style={[styles.companyName, { color: theme.custom.colors.textSecondary }]}>{visitor.company}</Text>
-        <StatusBadge status={(visitor.status as any) || 'Approved'} style={{ marginTop: 8 }} />
-      </View>
-
-      <View style={styles.detailsList}>
-        <DetailRow label="Visit Purpose" value={(visitor as any).purpose} theme={theme} />
-        <DetailRow label="Host" value={(visitor as any).host} theme={theme} />
-        <DetailRow label="Visit Date & Time" value={`${(visitor as any).date}, ${(visitor as any).time}`} theme={theme} />
-        <DetailRow label="Valid Until" value={(visitor as any).validUntil} theme={theme} />
-        <DetailRow label="Pass ID" value={(visitor as any).passId} theme={theme} />
-        <DetailRow label="Phone" value={(visitor as any).phone} theme={theme} />
-        <DetailRow label="Email" value={(visitor as any).email} theme={theme} />
-      </View>
-
-      <View style={styles.timelineSection}>
-        <Text style={[styles.timelineTitle, { color: theme.custom.colors.textPrimary }]}>Timeline</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.custom.colors.background }}>
+      <ScrollView style={[styles.container]}>
         
-        <TimelineItem 
-          title="Pass Generated" 
-          time="11 Jul 2024, 05:30 PM" 
-          isCompleted={true}
-          theme={theme}
-        />
-        <TimelineItem 
-          title="Visitor Arrived" 
-          time="12 Jul 2024, 09:50 AM" 
-          isCompleted={true}
-          theme={theme}
-        />
-        <TimelineItem 
-          title="Checked-In" 
-          time="12 Jul 2024, 10:05 AM" 
-          isCompleted={true}
-          isLast={true}
-          theme={theme}
-        />
-      </View>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <Icon name="arrow-back" size={24} color={theme.custom.colors.textPrimary} />
+          </TouchableOpacity>
+          <View style={styles.avatarContainer}>
+            <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Icon name="person" size={40} color={theme.colors.primary} />
+            </View>
+            <Text style={[styles.visitorName, { color: theme.custom.colors.textPrimary }]}>{visitor.name}</Text>
+            <Text style={[styles.companyName, { color: theme.custom.colors.textSecondary }]}>{visitor.company || 'Individual'}</Text>
+            <StatusBadge status={visit.status} style={{ marginTop: 8 }} />
+          </View>
+        </View>
 
-      <View style={styles.actions}>
-        <SecondaryButton title="Resend Pass" onPress={() => {}} />
-      </View>
-    </ScrollView>
+        <View style={styles.statsRow}>
+          <View style={styles.statBox}>
+            <Text style={[styles.statValue, { color: theme.custom.colors.textPrimary }]}>{visitor.totalVisits}</Text>
+            <Text style={[styles.statLabel, { color: theme.custom.colors.textSecondary }]}>Total Visits</Text>
+          </View>
+          <View style={styles.statDivider} />
+          <View style={styles.statBox}>
+            <Text style={[styles.statValue, { color: theme.colors.primary }]}>{visit.status === VisitStatus.CHECKED_IN ? 'Active' : 'Past'}</Text>
+            <Text style={[styles.statLabel, { color: theme.custom.colors.textSecondary }]}>Status</Text>
+          </View>
+        </View>
+
+        <View style={styles.detailsList}>
+          <DetailRow label="Visit Purpose" value={visit.purpose} theme={theme} />
+          <DetailRow label="Host ID" value={visit.hostId} theme={theme} />
+          <DetailRow label="Scheduled Date" value={new Date(visit.scheduledDate).toLocaleDateString()} theme={theme} />
+          {visitor.phone && <DetailRow label="Phone" value={visitor.phone} theme={theme} />}
+          {visitor.email && <DetailRow label="Email" value={visitor.email} theme={theme} />}
+          {visitor.governmentId && <DetailRow label="Gov ID" value="****" theme={theme} />}
+        </View>
+
+        <View style={styles.timelineSection}>
+          <Text style={[styles.timelineTitle, { color: theme.custom.colors.textPrimary }]}>Visit Audit Timeline</Text>
+          
+          {timelineEvents.map((event, index) => (
+            <TimelineItem 
+              key={index}
+              title={event.title} 
+              time={event.time} 
+              isCompleted={event.isCompleted}
+              isLast={index === timelineEvents.length - 1}
+              theme={theme}
+            />
+          ))}
+        </View>
+
+        <View style={styles.actions}>
+          <SecondaryButton title="View Digital Pass" onPress={() => navigation.navigate('DigitalPass', { visitId: visit.id })} />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
@@ -156,10 +190,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    alignItems: 'center',
-    paddingVertical: 24,
+    padding: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+  },
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: 8,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    alignItems: 'center',
+    paddingBottom: 16,
   },
   avatar: {
     width: 80,
@@ -176,6 +218,29 @@ const styles = StyleSheet.create({
   },
   companyName: {
     fontSize: 14,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+  },
+  statBox: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  statLabel: {
+    fontSize: 12,
+  },
+  statDivider: {
+    width: 1,
+    backgroundColor: '#E2E8F0',
   },
   detailsList: {
     padding: 24,

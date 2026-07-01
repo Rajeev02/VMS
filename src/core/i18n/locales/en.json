@@ -1,0 +1,28 @@
+{
+  "common": {
+    "welcome": "Welcome to VMS",
+    "login": "Login",
+    "logout": "Log Out",
+    "search": "Search",
+    "submit": "Submit",
+    "cancel": "Cancel",
+    "loading": "Loading...",
+    "error": "An error occurred"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "todaysVisitors": "Today's Visitors",
+    "pending": "Pending",
+    "checkedIn": "Checked In",
+    "checkedOut": "Checked Out"
+  },
+  "visitor": {
+    "pass": "Visitor Pass",
+    "name": "Name",
+    "company": "Company",
+    "purpose": "Purpose",
+    "host": "Host",
+    "checkIn": "Check In",
+    "checkOut": "Check Out"
+  }
+}

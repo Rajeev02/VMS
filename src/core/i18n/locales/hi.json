@@ -1,0 +1,28 @@
+{
+  "common": {
+    "welcome": "VMS में आपका स्वागत है",
+    "login": "लॉग इन करें",
+    "logout": "लॉग आउट करें",
+    "search": "खोजें",
+    "submit": "जमा करें",
+    "cancel": "रद्द करें",
+    "loading": "लोड हो रहा है...",
+    "error": "एक त्रुटि हुई"
+  },
+  "dashboard": {
+    "title": "डैशबोर्ड",
+    "todaysVisitors": "आज के आगंतुक",
+    "pending": "लंबित",
+    "checkedIn": "चेक-इन",
+    "checkedOut": "चेक-आउट"
+  },
+  "visitor": {
+    "pass": "आगंतुक पास",
+    "name": "नाम",
+    "company": "कंपनी",
+    "purpose": "उद्देश्य",
+    "host": "मेजबान",
+    "checkIn": "चेक-इन",
+    "checkOut": "चेक-आउट"
+  }
+}
