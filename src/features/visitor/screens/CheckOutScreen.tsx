@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 're
 import { Text, useTheme, Switch } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 
 export const CheckOutScreen = () => {

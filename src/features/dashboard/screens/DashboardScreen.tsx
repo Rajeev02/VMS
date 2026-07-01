@@ -4,15 +4,19 @@ import { Text, useTheme } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppTheme } from '../../../theme/theme';
 import { RootState } from '../../../app/store';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { StatusBadge } from '../../../components/StatusBadge';
+import { hasPermission, Permissions } from '../../../core/auth/permissions';
 import { useNavigation } from '@react-navigation/native';
+
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export const DashboardScreen = () => {
   const theme = useTheme<AppTheme>();
   const dispatch = useDispatch();
   const user = useSelector((state: RootState) => state.auth.user);
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   // Mock data for the UI
   const stats = [
@@ -20,10 +24,14 @@ export const DashboardScreen = () => {
     { title: "Checked-in", count: 12, pending: 2, color: theme.custom.colors.border },
   ];
 
+  const canScanQR = user ? hasPermission(user.permissions, Permissions.SCAN_QR) : false;
+  const canRegisterWalkIn = user ? hasPermission(user.permissions, Permissions.REGISTER_WALK_IN) : false;
+  const canManualVerify = user ? hasPermission(user.permissions, Permissions.MANUAL_VERIFY) : false;
+
   const quickActions = [
-    { id: 1, title: 'Scan QR', icon: 'qr-code-scanner', color: '#10B981', action: () => navigation.navigate('Scanner') },
-    { id: 2, title: 'Walk-in Registration', icon: 'person-add', color: '#3B82F6', action: () => navigation.navigate('WalkInRegistration') },
-    { id: 3, title: 'Verify Without Pass', icon: 'search', color: '#F59E0B', action: () => navigation.navigate('VerifyWithoutPass') },
+    ...(canScanQR ? [{ id: 1, title: 'Scan QR', icon: 'qr-code-scanner', color: '#10B981', action: () => navigation.navigate('Activity') }] : []),
+    ...(canRegisterWalkIn ? [{ id: 2, title: 'Walk-in Registration', icon: 'person-add', color: '#3B82F6', action: () => navigation.navigate('WalkInRegistration') }] : []),
+    ...(canManualVerify ? [{ id: 3, title: 'Verify Without Pass', icon: 'search', color: '#F59E0B', action: () => navigation.navigate('VerifyWithoutPass') }] : []),
   ];
 
   const recentActivity = [
@@ -34,7 +42,7 @@ export const DashboardScreen = () => {
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: theme.custom.colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.userInfo}>
           <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
             <Text style={{ color: 'white', fontWeight: 'bold' }}>SO</Text>
@@ -110,7 +118,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 24,
     paddingBottom: 16,
   },
   userInfo: {

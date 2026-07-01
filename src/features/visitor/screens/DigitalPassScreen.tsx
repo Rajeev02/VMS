@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform,
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { NotificationService, NotificationChannel, NotificationPayload } from '../../../core/notifications/NotificationService';

@@ -7,7 +7,7 @@ import { TokenManager } from '../../../core/network/TokenManager';
 import { AuthRepository } from '../AuthRepository';
 import { loginSuccess, logout, setAuthLoading } from '../authSlice';
 import Logger from '../../../core/logger/Logger';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const SplashScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -21,8 +21,12 @@ export const SplashScreen = () => {
 
         if (token) {
           Logger.info('Token found, fetching profile...');
-          const profile = await AuthRepository.fetchProfile();
-          dispatch(loginSuccess(profile));
+          const user = await AuthRepository.restoreSession();
+          if (user) {
+            dispatch(loginSuccess(user));
+          } else {
+            dispatch(logout());
+          }
         } else {
           Logger.info('No token found, redirecting to login');
           dispatch(logout());

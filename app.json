@@ -4,25 +4,35 @@
     "slug": "VMS",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./icons/ios/AppIcon~ios-marketing.png",
     "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.VMS"
+      "bundleIdentifier": "io.github.rajeev02.vms",
+      "infoPlist": {
+        "NSCameraUsageDescription": "The app needs access to your camera to scan QR code visitor passes."
+      },
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
+      "icon": "./icons/android/play_store_512.png",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./icons/android/play_store_512.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "googleServicesFile": "./google-services.json",
+      "package": "io.github.rajeev02.vms"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./icons/web/favicon.ico"
     },
     "plugins": [
+      "@react-native-firebase/app",
+      "@react-native-firebase/auth",
       "expo-secure-store",
       [
         "react-native-vision-camera",
@@ -31,10 +41,17 @@
         }
       ],
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "The app needs access to your photos to let you select a QR code pass from your gallery."
+        }
+      ],
+      [
         "expo-build-properties",
         {
           "ios": {
-            "deploymentTarget": "16.4"
+            "deploymentTarget": "16.4",
+            "useFrameworks": "static"
           }
         }
       ]

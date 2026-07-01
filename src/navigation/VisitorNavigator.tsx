@@ -4,37 +4,37 @@ import { VisitorsScreen } from '../features/visitor/screens/VisitorsScreen';
 import { VisitorDetailsScreen } from '../features/visitor/screens/VisitorDetailsScreen';
 import { CreateVisitorScreen } from '../features/visitor/screens/CreateVisitorScreen';
 import { SearchVisitorScreen } from '../features/qr/screens/SearchVisitorScreen';
-import { DigitalPassScreen } from '../features/visitor/screens/Placeholders';
+import { DigitalPassScreen } from '../features/visitor/screens/DigitalPassScreen';
 
 const Stack = createNativeStackNavigator();
 
 export const VisitorNavigator = () => {
   return (
-    <Stack.Navigator>
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen 
         name="VisitorsList" 
         component={VisitorsScreen} 
-        options={{ title: 'Visitors' }} 
+        options={{ headerShown: false, title: 'Visitors' }} 
       />
       <Stack.Screen 
         name="SearchVisitor" 
         component={SearchVisitorScreen} 
-        options={{ title: 'Emergency Search' }} 
+        options={{ headerShown: false, title: 'Emergency Search' }} 
       />
       <Stack.Screen 
         name="VisitorDetails" 
         component={VisitorDetailsScreen} 
-        options={{ title: 'Visitor Details' }} 
+        options={{ headerShown: false, title: 'Visitor Details' }} 
       />
       <Stack.Screen 
         name="CreateVisitor" 
         component={CreateVisitorScreen} 
-        options={{ title: 'New Visitor' }} 
+        options={{ headerShown: false, title: 'New Visitor' }} 
       />
       <Stack.Screen 
         name="DigitalPass" 
         component={DigitalPassScreen} 
-        options={{ title: 'Visitor Pass' }} 
+        options={{ headerShown: false, title: 'Visitor Pass' }} 
       />
     </Stack.Navigator>
   );

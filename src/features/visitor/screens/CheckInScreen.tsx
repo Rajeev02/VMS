@@ -3,7 +3,7 @@ import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, P
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { CustomInput } from '../../../components/CustomInput';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';

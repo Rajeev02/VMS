@@ -4,7 +4,8 @@ import { TextInput, Button, Text, useTheme, ActivityIndicator } from 'react-nati
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { AppTheme } from '../../../theme/theme';
-import { Visitor, VisitorRepository } from '../../visitor/VisitorRepository';
+import { VisitorRepository } from '../../visitor/VisitorRepository';
+import { Visitor } from '../../../domain/models/Visitor';
 import Logger from '../../../core/logger/Logger';
 
 export const SearchVisitorScreen = () => {
@@ -30,12 +31,12 @@ export const SearchVisitorScreen = () => {
 
   const renderItem = ({ item }: { item: Visitor }) => (
     <TouchableOpacity 
-      style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+      style={[styles.card, { backgroundColor: theme.colors.surface, borderColor: theme.custom.colors.border }]}
       onPress={() => navigation.navigate('VisitorDetails', { id: item.id })}
     >
       <View style={styles.cardHeader}>
         <Text variant="titleMedium" style={{ color: theme.colors.primary }}>{item.name}</Text>
-        <Text variant="bodySmall" style={{ color: theme.colors.textSecondary }}>{item.status}</Text>
+        <Text variant="bodySmall" style={{ color: theme.custom.colors.textSecondary }}>{item.status}</Text>
       </View>
       <Text variant="bodyMedium">Phone: {item.phone || 'N/A'}</Text>
       <Text variant="bodyMedium">Email: {item.email || 'N/A'}</Text>
@@ -61,17 +62,19 @@ export const SearchVisitorScreen = () => {
       {loading ? (
         <ActivityIndicator style={styles.loader} />
       ) : (
-        <FlashList
-          data={results}
-          renderItem={renderItem}
-          estimatedItemSize={100}
-          contentContainerStyle={styles.listContainer}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text>No visitors found. Please try another query.</Text>
-            </View>
-          }
-        />
+        <>
+          <FlashList
+            data={results}
+            renderItem={renderItem}
+            {...{ estimatedItemSize: 100 }}
+            contentContainerStyle={styles.listContainer}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <Text>No visitors found. Please try another query.</Text>
+              </View>
+            }
+          />
+        </>
       )}
     </View>
   );

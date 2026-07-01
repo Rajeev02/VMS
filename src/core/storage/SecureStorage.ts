@@ -5,18 +5,25 @@ import Logger from '../logger/Logger';
  * Secure Storage Utility wrapper around expo-secure-store
  */
 class SecureStorage {
-  static async setItem(key: string, value: string): Promise<void> {
+  static async setItem<T>(key: string, value: T): Promise<void> {
     try {
-      await SecureStore.setItemAsync(key, value);
+      const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
+      await SecureStore.setItemAsync(key, stringValue);
     } catch (error) {
       Logger.error(`Error saving secure data for key: ${key}`, error);
       throw new Error(`Failed to save secure data: ${key}`);
     }
   }
 
-  static async getItem(key: string): Promise<string | null> {
+  static async getItem<T>(key: string): Promise<T | null> {
     try {
-      return await SecureStore.getItemAsync(key);
+      const value = await SecureStore.getItemAsync(key);
+      if (!value) return null;
+      try {
+        return JSON.parse(value) as T;
+      } catch {
+        return value as unknown as T;
+      }
     } catch (error) {
       Logger.error(`Error reading secure data for key: ${key}`, error);
       return null;

@@ -8,6 +8,7 @@ export interface Visitor {
   company?: string;
   governmentId?: string; // Should be encrypted/hashed in production
   photoUrl?: string;
+  idCardUrl?: string;
   status: VisitorStatus;
   
   // Computed / Cached History Stats

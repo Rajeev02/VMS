@@ -8,7 +8,7 @@ import { loginSuccess } from '../authSlice';
 import Logger from '../../../core/logger/Logger';
 import { CustomInput } from '../../../components/CustomInput';
 import { PrimaryButton } from '../../../components/PrimaryButton';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const LoginScreen = () => {
   const theme = useTheme<AppTheme>();

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { AppTheme } from '../../../theme/theme';
 import { CustomInput } from '../../../components/CustomInput';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { SmartSearchService } from '../../../core/services/SmartSearchService';
 import { Visitor } from '../../../domain/models/Visitor';
 
@@ -26,6 +27,7 @@ export const WalkInRegistrationScreen = () => {
   const [email, setEmail] = useState('');
   const [company, setCompany] = useState('');
   const [govId, setGovId] = useState('');
+  const [photoUrl, setPhotoUrl] = useState('');
 
   const handleSearch = async () => {
     if (!searchQuery) return;
@@ -58,6 +60,30 @@ export const WalkInRegistrationScreen = () => {
     setEmail('');
     setCompany('');
     setGovId('');
+    setPhotoUrl('');
+  };
+
+  const handleTakePhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Sorry, we need camera permissions to make this work!');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotoUrl(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error taking photo:', error);
+    }
   };
 
   const handleNext = () => {
@@ -69,6 +95,7 @@ export const WalkInRegistrationScreen = () => {
         email,
         company,
         governmentId: govId,
+        photoUrl: photoUrl,
       }
     });
   };
@@ -183,6 +210,21 @@ export const WalkInRegistrationScreen = () => {
                 placeholder="Enter company name"
               />
               
+              <View style={styles.photoSection}>
+                <Text style={[styles.photoLabel, { color: theme.custom.colors.textPrimary }]}>Visitor Photo</Text>
+                {photoUrl ? (
+                  <View style={styles.photoPreviewContainer}>
+                    <Image source={{ uri: photoUrl }} style={styles.photoPreview} />
+                    <SecondaryButton title="Retake Photo" onPress={handleTakePhoto} style={{ flex: 1, marginLeft: 16 }} />
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.photoPlaceholder} onPress={handleTakePhoto}>
+                    <Icon name="add-a-photo" size={32} color={theme.custom.colors.textSecondary} />
+                    <Text style={{ marginTop: 8, color: theme.custom.colors.textSecondary }}>Tap to take photo</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+
               <SecondaryButton title="Start Over" onPress={resetSearch} style={{ marginTop: 24 }} />
             </View>
           </View>
@@ -273,5 +315,32 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+  },
+  photoSection: {
+    marginTop: 16,
+  },
+  photoLabel: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  photoPlaceholder: {
+    height: 120,
+    backgroundColor: '#E2E8F0',
+    borderRadius: 8,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#94A3B8',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  photoPreviewContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  photoPreview: {
+    width: 120,
+    height: 120,
+    borderRadius: 8,
   },
 });

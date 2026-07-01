@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Alert, TouchableOpacity, SafeAreaView, Linking } from 'react-native';
+import { StyleSheet, View, Alert, TouchableOpacity, Linking } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme, Button } from 'react-native-paper';
 import { Camera, useCameraDevice, useCodeScanner } from 'react-native-vision-camera';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
+// import removed due to package deletion
 import { AppTheme } from '../../../theme/theme';
 import { VisitorRepository } from '../../visitor/VisitorRepository';
 import Logger from '../../../core/logger/Logger';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const QRScannerScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -102,6 +105,32 @@ export const QRScannerScreen = () => {
     );
   }
 
+  const handleGalleryPick = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Sorry, we need camera roll permissions to scan a QR code from your gallery!');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: false,
+        quality: 1,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // BarcodeScanner is deprecated and removed to fix iOS build errors.
+        Alert.alert('Not Supported', 'Scanning from gallery is currently disabled while we upgrade the barcode scanner library.');
+      }
+    } catch (error) {
+      Logger.error('Failed to pick and scan image', error);
+      Alert.alert('Error', 'An error occurred while picking the image.');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <View style={styles.container}>
       {isFocused && (
@@ -145,7 +174,7 @@ export const QRScannerScreen = () => {
             <Text style={styles.bottomActionText}>Flash</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.bottomAction}>
+          <TouchableOpacity style={styles.bottomAction} onPress={handleGalleryPick}>
             <Icon name="photo-library" size={28} color="#FFF" />
             <Text style={styles.bottomActionText}>Gallery</Text>
           </TouchableOpacity>

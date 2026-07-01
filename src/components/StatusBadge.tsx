@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ViewStyle } from 'react-native';
 import { useTheme } from 'react-native-paper';
 import { AppTheme } from '../theme/theme';
 
-export type StatusType = 'Draft' | 'Pending' | 'Approved' | 'Checked-In' | 'Checked-Out' | 'Completed' | 'Rejected' | 'Cancelled' | 'Expired' | 'No Show';
+export type StatusType = string;
 
 interface StatusBadgeProps {
   status: StatusType;

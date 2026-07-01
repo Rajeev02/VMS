@@ -1,5 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { DashboardScreen } from '../features/dashboard/screens/DashboardScreen';
 import { VisitorNavigator } from './VisitorNavigator';
 import { QRScannerScreen } from '../features/qr/screens/QRScannerScreen';
@@ -9,12 +10,18 @@ import { AppTheme } from '../theme/theme';
 import { useSelector } from 'react-redux';
 import { RootState } from '../app/store';
 import { hasPermission, Permissions } from '../core/auth/permissions';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { View, Text } from 'react-native';
 
-const Tab = createBottomTabNavigator();
+import { WalkInRegistrationScreen } from '../features/visitor/screens/WalkInRegistrationScreen';
+import { CaptureIDScreen } from '../features/visitor/screens/CaptureIDScreen';
+import { CheckInScreen } from '../features/visitor/screens/CheckInScreen';
+import { VerifyWithoutPassScreen } from '../features/visitor/screens/VerifyWithoutPassScreen';
 
-export const AppNavigator = () => {
+const Tab = createBottomTabNavigator();
+const Stack = createNativeStackNavigator();
+
+const TabNavigator = () => {
   const theme = useTheme<AppTheme>();
   const user = useSelector((state: RootState) => state.auth.user);
   
@@ -23,6 +30,7 @@ export const AppNavigator = () => {
   return (
     <Tab.Navigator
       screenOptions={{
+        headerShown: false,
         headerStyle: { backgroundColor: theme.colors.surface },
         headerTintColor: theme.custom.colors.textPrimary,
         tabBarActiveTintColor: theme.colors.primary,
@@ -78,5 +86,17 @@ export const AppNavigator = () => {
         }}
       />
     </Tab.Navigator>
+  );
+};
+
+export const AppNavigator = () => {
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
+      <Stack.Screen name="WalkInRegistration" component={WalkInRegistrationScreen} options={{ headerShown: false, title: 'Walk-in Registration' }} />
+      <Stack.Screen name="CaptureID" component={CaptureIDScreen} options={{ headerShown: false, title: 'Capture Government ID' }} />
+      <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ headerShown: false, title: 'Check-In' }} />
+      <Stack.Screen name="VerifyWithoutPass" component={VerifyWithoutPassScreen} options={{ headerShown: false, title: 'Verify Identity' }} />
+    </Stack.Navigator>
   );
 };

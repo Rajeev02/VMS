@@ -4,18 +4,22 @@ import { Text, useTheme, ActivityIndicator, FAB } from 'react-native-paper';
 import { FlashList } from '@shopify/flash-list';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import { Visitor, VisitorRepository } from '../VisitorRepository';
+import { VisitorRepository } from '../VisitorRepository';
+import { Visitor } from '../../../domain/models/Visitor';
 import { PermissionGuard } from '../../../core/auth/PermissionGuard';
 import { Permissions } from '../../../core/auth/permissions';
 import Logger from '../../../core/logger/Logger';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { StatusBadge } from '../../../components/StatusBadge';
 
 const FilterTabs = ['All', 'Upcoming', 'Checked-In', 'Checked-Out'];
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 export const VisitorsScreen = () => {
   const theme = useTheme<AppTheme>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const [visitors, setVisitors] = useState<Visitor[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -88,7 +92,7 @@ export const VisitorsScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.custom.colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.headerTitle, { color: theme.custom.colors.textPrimary }]}>My Visitors</Text>
         
         <View style={[styles.searchContainer, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
@@ -128,7 +132,7 @@ export const VisitorsScreen = () => {
       <FlashList
         data={visitors}
         renderItem={renderItem}
-        estimatedItemSize={80}
+        {...{ estimatedItemSize: 80 }}
         onRefresh={onRefresh}
         refreshing={refreshing}
         contentContainerStyle={styles.listContainer}

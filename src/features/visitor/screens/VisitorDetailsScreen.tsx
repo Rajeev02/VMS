@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { Text, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
 import Logger from '../../../core/logger/Logger';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 
@@ -12,7 +12,7 @@ import { SecondaryButton } from '../../../components/SecondaryButton';
 import { Visitor } from '../../../domain/models/Visitor';
 import { Visit } from '../../../domain/models/Visit';
 import { AuditLog } from '../../../domain/models/AuditLog';
-import { VisitorRepository } from '../../../domain/repositories/VisitorRepository';
+import { VisitorRepository } from '../VisitorRepository';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import { AuditRepository } from '../../../domain/repositories/AuditRepository';
 import { VisitStatus } from '../../../domain/models/enums';
@@ -40,7 +40,7 @@ export const VisitorDetailsScreen = () => {
           setVisit(currentVisit);
           
           // Fetch Visitor
-          const currentVisitor = await VisitorRepository.getById(currentVisit.visitorId);
+          const currentVisitor = await VisitorRepository.getVisitorById(currentVisit.visitorId);
           if (currentVisitor) {
             setVisitor(currentVisitor);
           }
@@ -96,9 +96,13 @@ export const VisitorDetailsScreen = () => {
             <Icon name="arrow-back" size={24} color={theme.custom.colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
-              <Icon name="person" size={40} color={theme.colors.primary} />
-            </View>
+            {visitor.photoUrl ? (
+              <Image source={{ uri: visitor.photoUrl }} style={styles.avatarImage} />
+            ) : (
+              <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Icon name="person" size={40} color={theme.colors.primary} />
+              </View>
+            )}
             <Text style={[styles.visitorName, { color: theme.custom.colors.textPrimary }]}>{visitor.name}</Text>
             <Text style={[styles.companyName, { color: theme.custom.colors.textSecondary }]}>{visitor.company || 'Individual'}</Text>
             <StatusBadge status={visit.status} style={{ marginTop: 8 }} />
@@ -125,6 +129,13 @@ export const VisitorDetailsScreen = () => {
           {visitor.email && <DetailRow label="Email" value={visitor.email} theme={theme} />}
           {visitor.governmentId && <DetailRow label="Gov ID" value="****" theme={theme} />}
         </View>
+
+        {visitor.idCardUrl && (
+          <View style={styles.verificationSection}>
+            <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Verification Documents</Text>
+            <Image source={{ uri: visitor.idCardUrl }} style={styles.idCardImage} />
+          </View>
+        )}
 
         <View style={styles.timelineSection}>
           <Text style={[styles.timelineTitle, { color: theme.custom.colors.textPrimary }]}>Visit Audit Timeline</Text>
@@ -211,6 +222,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    marginBottom: 16,
+  },
   visitorName: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -259,6 +276,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
     textAlign: 'right',
+  },
+  verificationSection: {
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  idCardImage: {
+    width: '100%',
+    height: 200,
+    borderRadius: 8,
+    resizeMode: 'contain',
+    backgroundColor: '#000',
   },
   timelineSection: {
     padding: 24,

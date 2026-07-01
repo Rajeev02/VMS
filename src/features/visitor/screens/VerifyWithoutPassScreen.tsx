@@ -4,7 +4,7 @@ import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { FlashList } from '@shopify/flash-list';
 import { AppTheme } from '../../../theme/theme';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SmartSearchService } from '../../../core/services/SmartSearchService';
 import { VisitorPassRepository } from '../../../domain/repositories/VisitorPassRepository';

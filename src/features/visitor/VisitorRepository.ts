@@ -1,164 +1,80 @@
 import Logger from '../../core/logger/Logger';
-
-export type VisitorStatus = 
-  | 'DRAFT'
-  | 'PENDING_APPROVAL'
-  | 'APPROVED'
-  | 'ARRIVED'
-  | 'CHECKED_IN'
-  | 'CHECKED_OUT'
-  | 'COMPLETED'
-  | 'CANCELLED'
-  | 'REJECTED'
-  | 'EXPIRED';
-
-export interface VisitorPass {
-  id: string;
-  visitorId: string;
-  qrCodeValue: string;
-  type: 'QR' | 'TEMPORARY_PIN' | 'NFC' | 'PRINTED';
-  validFrom: string;
-  validUntil: string;
-}
-
-export interface Visitor {
-  id: string;
-  name: string;
-  company: string;
-  purpose: string;
-  status: VisitorStatus;
-  type: 'PRE_APPROVED' | 'WALK_IN';
-  hostId: string;
-  createdAt: string;
-  idVerified: boolean;
-  badgeNumber?: string;
-  phone?: string;
-  email?: string;
-}
-
-// Mock Data
-let mockVisitors: Visitor[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    company: 'Acme Corp',
-    purpose: 'Meeting',
-    status: 'APPROVED',
-    type: 'PRE_APPROVED',
-    hostId: '1',
-    createdAt: new Date().toISOString(),
-    idVerified: false,
-    phone: '555-0101',
-    email: 'john@acme.com'
-  },
-  {
-    id: '2',
-    name: 'Jane Smith',
-    company: 'Tech Solutions',
-    purpose: 'Interview',
-    status: 'CHECKED_IN',
-    type: 'WALK_IN',
-    hostId: '1',
-    createdAt: new Date().toISOString(),
-    idVerified: true,
-    badgeNumber: 'B-102',
-    phone: '555-0102',
-  },
-];
-
-let mockPasses: VisitorPass[] = [
-  {
-    id: 'pass-1',
-    visitorId: '1',
-    qrCodeValue: 'qr-john-doe-123',
-    type: 'QR',
-    validFrom: new Date().toISOString(),
-    validUntil: new Date(Date.now() + 86400000).toISOString(),
-  }
-];
+import { IVisitorDataSource } from '../../domain/datasources/IVisitorDataSource';
+import { IVisitDataSource } from '../../domain/datasources/IVisitDataSource';
+import { IPassDataSource } from '../../domain/datasources/IPassDataSource';
+import { FirebaseVisitorDataSource } from '../../infrastructure/firebase/FirebaseVisitorDataSource';
+import { FirebaseVisitDataSource } from '../../infrastructure/firebase/FirebaseVisitDataSource';
+import { FirebasePassDataSource } from '../../infrastructure/firebase/FirebasePassDataSource';
+import { Visitor } from '../../domain/models/Visitor';
+import { Visit } from '../../domain/models/Visit';
+import { VisitorPass } from '../../domain/models/VisitorPass';
+import { VisitStatus, PassStatus } from '../../domain/models/enums';
 
 export class VisitorRepository {
-  static async getVisitors(page: number = 1, limit: number = 10): Promise<Visitor[]> {
-    Logger.info(`VisitorRepository: getVisitors page=${page}`);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-    const startIndex = (page - 1) * limit;
-    return mockVisitors.slice(startIndex, startIndex + limit);
+  private static visitorDS: IVisitorDataSource = new FirebaseVisitorDataSource();
+  private static visitDS: IVisitDataSource = new FirebaseVisitDataSource();
+  private static passDS: IPassDataSource = new FirebasePassDataSource();
+
+  static async getVisitors(): Promise<Visitor[]> {
+    Logger.info(`[VisitorRepository] getVisitors`);
+    // Ideally we would have a getAll or paginate on visitorDS.
+    // For now, returning an empty list as we load them per-visit.
+    return [];
   }
 
   static async getVisitorById(id: string): Promise<Visitor | null> {
-    Logger.info(`VisitorRepository: getVisitorById id=${id}`);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    return mockVisitors.find(v => v.id === id) || null;
+    Logger.info(`[VisitorRepository] getVisitorById id=${id}`);
+    return await this.visitorDS.getVisitorById(id);
   }
 
   static async searchVisitors(query: string): Promise<Visitor[]> {
-    Logger.info(`VisitorRepository: searchVisitors query=${query}`);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const lowerQuery = query.toLowerCase();
-    return mockVisitors.filter(v => 
-      v.name.toLowerCase().includes(lowerQuery) || 
-      v.email?.toLowerCase().includes(lowerQuery) || 
-      v.phone?.includes(query)
-    );
+    Logger.info(`[VisitorRepository] searchVisitors query=${query}`);
+    return await this.visitorDS.searchVisitors(query);
   }
 
   static async getVisitorByPassQr(qrValue: string): Promise<Visitor | null> {
-    Logger.info(`VisitorRepository: getVisitorByPassQr qr=${qrValue}`);
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    const pass = mockPasses.find(p => p.qrCodeValue === qrValue);
+    Logger.info(`[VisitorRepository] getVisitorByPassQr qr=${qrValue}`);
+    const pass = await this.passDS.getPassByToken(qrValue);
     if (!pass) return null;
-    return this.getVisitorById(pass.visitorId);
+    
+    const visit = await this.visitDS.getVisitById(pass.visitId);
+    if (!visit) return null;
+
+    return await this.visitorDS.getVisitorById(visit.visitorId);
   }
 
-  static async createVisitor(visitorData: Partial<Visitor>): Promise<{ visitor: Visitor, pass?: VisitorPass }> {
-    Logger.info(`VisitorRepository: createVisitor`);
-    await new Promise((resolve) => setTimeout(resolve, 800));
+  static async registerWalkInVisitor(visitorData: Partial<Visitor>, visitData: Partial<Visit>): Promise<{ visitor: Visitor, visit: Visit, pass: VisitorPass }> {
+    Logger.info(`[VisitorRepository] registerWalkInVisitor`);
     
-    const newVisitor: Visitor = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: visitorData.name || '',
-      company: visitorData.company || '',
-      purpose: visitorData.purpose || '',
-      type: visitorData.type || 'WALK_IN',
-      hostId: visitorData.hostId || '1',
-      status: visitorData.type === 'PRE_APPROVED' ? 'APPROVED' : 'PENDING_APPROVAL',
-      createdAt: new Date().toISOString(),
-      idVerified: false,
-      phone: visitorData.phone,
-      email: visitorData.email,
-    };
-    
-    mockVisitors.unshift(newVisitor);
-
-    if (newVisitor.status === 'APPROVED') {
-      const pass = await this.generatePass(newVisitor.id);
-      return { visitor: newVisitor, pass };
+    // 1. Create or Update Visitor
+    let visitor: Visitor;
+    if (visitorData.id) {
+      visitor = await this.visitorDS.updateVisitor(visitorData.id, visitorData);
+    } else {
+      visitor = await this.visitorDS.createVisitor(visitorData);
     }
 
-    return { visitor: newVisitor };
+    // 2. Create Visit
+    const visit = await this.visitDS.createVisit({
+      ...visitData,
+      visitorId: visitor.id,
+      status: VisitStatus.CHECKED_IN,
+      entryTime: new Date().toISOString(),
+    });
+
+    // 3. Generate Pass
+    const pass = await this.passDS.createPass({
+      visitId: visit.id,
+      qrToken: `qr-${visit.id}-${Date.now()}`,
+      publicUrl: `https://visitor.company.com/pass/${visit.id}`,
+      status: PassStatus.GENERATED,
+    });
+
+    return { visitor, visit, pass };
   }
 
-  static async generatePass(visitorId: string): Promise<VisitorPass> {
-    const pass: VisitorPass = {
-      id: `pass-${Math.random().toString(36).substr(2, 9)}`,
-      visitorId,
-      qrCodeValue: `qr-${visitorId}-${Date.now()}`,
-      type: 'QR',
-      validFrom: new Date().toISOString(),
-      validUntil: new Date(Date.now() + 86400000).toISOString(),
-    };
-    mockPasses.push(pass);
-    return pass;
-  }
-
-  static async updateVisitorStatus(id: string, updates: Partial<Visitor>): Promise<Visitor | null> {
-    Logger.info(`VisitorRepository: updateVisitorStatus id=${id} updates=${JSON.stringify(updates)}`);
-    await new Promise((resolve) => setTimeout(resolve, 400));
-    
-    const index = mockVisitors.findIndex(v => v.id === id);
-    if (index === -1) return null;
-
-    mockVisitors[index] = { ...mockVisitors[index], ...updates };
-    return mockVisitors[index];
+  static async updateVisitor(id: string, updates: Partial<Visitor>): Promise<Visitor> {
+    return await this.visitorDS.updateVisitor(id, updates);
   }
 }
+

@@ -8,8 +8,11 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from './src/core/errors/ErrorBoundary';
 import { OfflineManager } from './src/core/network/OfflineManager';
 
+import { initializeFirebaseInfrastructure } from './src/infrastructure/firebase/init';
+
 export default function App() {
   useEffect(() => {
+    initializeFirebaseInfrastructure();
     OfflineManager.init();
   }, []);
 

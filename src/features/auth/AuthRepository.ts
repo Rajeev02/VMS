@@ -1,77 +1,58 @@
-import { SecureStorage } from '../../core/storage/SecureStorage';
 import Logger from '../../core/logger/Logger';
 import { AuditRepository } from '../../domain/repositories/AuditRepository';
 import { AuditAction } from '../../domain/models/enums';
+import { IAuthDataSource, AuthUser } from '../../domain/datasources/IAuthDataSource';
+import { FirebaseAuthDataSource } from '../../infrastructure/firebase/FirebaseAuthDataSource';
+import SecureStorage from '../../core/storage/SecureStorage';
 
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
 }
 
-export interface UserSession {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+export type UserSession = AuthUser;
 
 export class AuthRepository {
   private static readonly TOKENS_KEY = 'vms_auth_tokens';
   private static readonly SESSION_KEY = 'vms_user_session';
+  
+  // In a strict DI container setup (e.g. Inversify), this would be injected.
+  // For this assignment, we instantiate the specific Firebase data source here as the composition root,
+  // but note that the rest of the file relies only on the `IAuthDataSource` interface.
+  private static dataSource: IAuthDataSource = new FirebaseAuthDataSource();
 
-  /**
-   * Mock Login returning JWT Tokens
-   */
   static async login(email: string, password: string): Promise<{ user: UserSession, tokens: AuthTokens }> {
     Logger.info(`[AuthRepository] Attempting login for ${email}`);
-    await new Promise((resolve) => setTimeout(resolve, 800));
-
-    let role = 'HOST';
-    if (email.includes('security')) role = 'SECURITY';
-    if (email.includes('admin')) role = 'ADMIN';
-
-    // Mock successful authentication
-    const user: UserSession = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: email.split('@')[0],
-      email: email,
-      role: role,
-    };
+    
+    // The repository delegates to the Data Source
+    const user = await this.dataSource.login(email, password);
+    const tokenStr = await this.dataSource.refreshToken();
 
     const tokens: AuthTokens = {
-      accessToken: `mock-jwt-access-${Date.now()}`,
-      refreshToken: `mock-jwt-refresh-${Date.now()}`,
+      accessToken: tokenStr,
+      refreshToken: tokenStr, // In Firebase, the JS SDK manages refresh automatically, but we store for legacy compatibility
     };
 
     await this.saveSession(user, tokens);
     
-    // Audit log
     await AuditRepository.log({
       action: AuditAction.LOGIN,
       entityType: 'AUTH',
       entityId: user.id,
       whoId: user.id,
-      whoRole: role,
+      whoRole: user.role,
     });
 
     return { user, tokens };
   }
 
-  /**
-   * Refresh the access token using the refresh token
-   */
   static async refreshToken(): Promise<AuthTokens> {
     Logger.info(`[AuthRepository] Refreshing Token`);
-    const tokens = await SecureStorage.getItem<AuthTokens>(this.TOKENS_KEY);
-    if (!tokens || !tokens.refreshToken) {
-      throw new Error('No refresh token available');
-    }
-
-    // Mock refreshing token
-    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    const tokenStr = await this.dataSource.refreshToken();
     const newTokens: AuthTokens = {
-      accessToken: `mock-jwt-access-${Date.now()}`,
-      refreshToken: `mock-jwt-refresh-${Date.now()}`, // Optional: rotate refresh token
+      accessToken: tokenStr,
+      refreshToken: tokenStr,
     };
 
     const user = await SecureStorage.getItem<UserSession>(this.SESSION_KEY);
@@ -95,19 +76,17 @@ export class AuthRepository {
       });
     }
 
+    await this.dataSource.logout();
     await SecureStorage.removeItem(this.TOKENS_KEY);
     await SecureStorage.removeItem(this.SESSION_KEY);
   }
 
   static async restoreSession(): Promise<UserSession | null> {
     try {
-      const tokens = await SecureStorage.getItem<AuthTokens>(this.TOKENS_KEY);
-      const user = await SecureStorage.getItem<UserSession>(this.SESSION_KEY);
-      
-      if (tokens && user) {
-        // In a real app, you would check if the access token is expired 
-        // and optionally call refreshToken() here before restoring the session.
-        return user;
+      // Check data source first for auto-login capabilities
+      const currentUser = await this.dataSource.getCurrentUser();
+      if (currentUser) {
+        return currentUser;
       }
       return null;
     } catch (e) {
@@ -121,3 +100,4 @@ export class AuthRepository {
     await SecureStorage.setItem(this.SESSION_KEY, user);
   }
 }
+

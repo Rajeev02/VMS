@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Switch } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme } from 'react-native-paper';
 import { useDispatch, useSelector } from 'react-redux';
 import { AppTheme } from '../../../theme/theme';
 import { RootState } from '../../../app/store';
 import { AuthRepository } from '../../auth/AuthRepository';
 import { logout } from '../../auth/authSlice';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const SettingsScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -115,7 +116,7 @@ const SettingsToggleItem = ({ icon, title, value, onValueChange, theme }: any) =
       <Icon name={icon} size={24} color={theme.custom.colors.textSecondary} style={styles.settingsIcon} />
       <Text style={[styles.settingsItemTitle, { color: theme.custom.colors.textPrimary }]}>{title}</Text>
     </View>
-    <Switch value={value} onValueChange={onValueChange} color={theme.colors.primary} />
+    <Switch value={value} onValueChange={onValueChange} trackColor={{ true: theme.colors.primary, false: '#E2E8F0' }} />
   </View>
 );
 

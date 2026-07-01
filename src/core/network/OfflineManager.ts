@@ -36,10 +36,9 @@ export class OfflineManager {
     };
     
     try {
-      const queueRaw = await SecureStorage.getItem(QUEUE_KEY);
-      const queue: QueuedRequest[] = queueRaw ? JSON.parse(queueRaw) : [];
+      const queue = await SecureStorage.getItem<QueuedRequest[]>(QUEUE_KEY) || [];
       queue.push(request);
-      await SecureStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+      await SecureStorage.setItem(QUEUE_KEY, queue);
       Logger.info(`Request queued: ${request.id}`);
     } catch (e) {
       Logger.error('Failed to enqueue request', e);
@@ -51,8 +50,7 @@ export class OfflineManager {
     this.isProcessing = true;
 
     try {
-      const queueRaw = await SecureStorage.getItem(QUEUE_KEY);
-      const queue: QueuedRequest[] = queueRaw ? JSON.parse(queueRaw) : [];
+      const queue = await SecureStorage.getItem<QueuedRequest[]>(QUEUE_KEY) || [];
 
       if (queue.length === 0) {
         this.isProcessing = false;
@@ -81,7 +79,7 @@ export class OfflineManager {
         }
       }
 
-      await SecureStorage.setItem(QUEUE_KEY, JSON.stringify(remainingQueue));
+      await SecureStorage.setItem(QUEUE_KEY, remainingQueue);
     } catch (e) {
       Logger.error('Failed to process queue', e);
     } finally {

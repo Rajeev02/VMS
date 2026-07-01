@@ -1,0 +1,100 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Function to get user role
+    // Assuming role is stored in user claims or we look up the users collection
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && getUserRole() == 'ADMIN';
+    }
+
+    function isSecurity() {
+      return isAuthenticated() && (getUserRole() == 'SECURITY' || getUserRole() == 'ADMIN');
+    }
+
+    function isHost() {
+      return isAuthenticated() && (getUserRole() == 'HOST' || getUserRole() == 'ADMIN');
+    }
+
+    // users
+    match /users/{userId} {
+      // Users can read their own profile, Admins can read/write all
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // roles & permissions
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /permissions/{permissionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // organizations
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // visitors (Permanent Identity)
+    match /visitors/{visitorId} {
+      // Security and Admins can read/write. Hosts can read to auto-fill details
+      allow read: if isAuthenticated();
+      allow write: if isSecurity();
+    }
+
+    // visits (Appointments)
+    match /visits/{visitId} {
+      // Security/Admins can read/write all. Hosts can read/write their own visits
+      allow read: if isSecurity() || (isHost() && resource.data.hostId == request.auth.uid);
+      allow write: if isSecurity() || (isHost() && request.resource.data.hostId == request.auth.uid);
+    }
+
+    // visitor_passes (Digital Passes)
+    match /visitor_passes/{passId} {
+      // Internal reading
+      allow read: if isAuthenticated();
+      allow write: if isSecurity();
+      
+      // Public Read - We restrict this using a specific Cloud Function or tight query conditions
+      // For pure public URL sharing, if Firestore is exposed directly for passes, it should only allow reading specific pass IDs and NOT listing them.
+      // But rule says: "Never expose sensitive internal data."
+      // The public pass should be served via Cloud Functions/Hosting. So no public Firestore read access.
+    }
+
+    // notifications
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow write: if isAdmin(); // System/Cloud Functions typically write these
+    }
+
+    // audit_logs
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow write: if isAuthenticated(); // Users can append logs via client, but Cloud Functions preferred
+    }
+    
+    // settings & feature_flags
+    match /settings/{settingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+    match /feature_flags/{flagId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+  }
+}

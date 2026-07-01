@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
 import { VisitorRepository } from '../VisitorRepository';
 import { MockNotificationService } from '../../../core/notifications/MockNotificationService';
+import { VisitStatus } from '../../../domain/models/enums';
 import Logger from '../../../core/logger/Logger';
 
 export const CreateVisitorScreen = () => {
@@ -22,18 +23,18 @@ export const CreateVisitorScreen = () => {
     if (!name || !company) return;
     setLoading(true);
     try {
-      const { visitor, pass } = await VisitorRepository.createVisitor({
+      const { visitor, visit, pass } = await VisitorRepository.registerWalkInVisitor({
         name,
         company,
-        purpose,
         phone,
         email,
-        type: 'WALK_IN', // Defaulting to Walk-In for Security creating them
+      }, {
+        purpose,
         hostId: '1', // Mock host ID
       });
 
-      if (visitor.status === 'PENDING_APPROVAL') {
-         MockNotificationService.notifyHostApprovalRequired(visitor.hostId, visitor.name);
+      if (visit.status === VisitStatus.PENDING) {
+         MockNotificationService.notifyHostApprovalRequired(visit.hostId, visitor.name);
          Logger.info('Host approval requested for Walk-In');
       }
 

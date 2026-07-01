@@ -1,4 +1,4 @@
-import { SecureStorage } from '../storage/SecureStorage';
+import SecureStorage from '../storage/SecureStorage';
 import NetInfo from '@react-native-community/netinfo';
 import Logger from '../logger/Logger';
 
