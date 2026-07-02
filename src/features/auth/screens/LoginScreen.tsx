@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, KeyboardAvoidingView, Platform, TouchableOpacity, ScrollView } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useDispatch } from 'react-redux';
 import { AppTheme } from '../../../theme/theme';
@@ -39,7 +39,8 @@ export const LoginScreen = () => {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={[styles.container, { backgroundColor: theme.custom.colors.surface }]}
     >
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.content}>
         <View style={styles.header}>
           <Text style={[styles.title, { color: theme.custom.colors.textPrimary }]}>
             Welcome Back!
@@ -116,7 +117,8 @@ export const LoginScreen = () => {
           <Text style={[styles.languageText, { color: theme.custom.colors.textSecondary }]}>English</Text>
           <Icon name="keyboard-arrow-down" size={20} color={theme.custom.colors.textSecondary} />
         </View>
-      </View>
+        </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 };

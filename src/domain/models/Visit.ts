@@ -17,6 +17,7 @@ export interface Visit {
   expectedExitTime?: string; // ISO 8601 DateTime
   actualExitTime?: string; // ISO 8601 DateTime
   
+  badgeNumber?: string; // Assigned physical badge
   notes?: string;
   
   createdAt: string;

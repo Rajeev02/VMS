@@ -15,7 +15,6 @@ export class GetVisitsByStatusUseCase {
     // or run multiple queries. Let's run a query for `in`.
     const snapshot = await firestore().collection('visits')
       .where('status', 'in', statuses)
-      .orderBy('updatedAt', 'desc')
       .get();
 
     const visits: PopulatedVisit[] = [];
@@ -40,6 +39,7 @@ export class GetVisitsByStatusUseCase {
     });
 
     const results = await Promise.all(promises);
+    results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
     return results;
   }
 }

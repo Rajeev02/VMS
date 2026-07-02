@@ -43,7 +43,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app needs access to your photos to let you select a QR code pass from your gallery."
+          "photosPermission": "The app needs access to your photos to let you select a QR code pass from your gallery.",
+          "cameraPermission": "The app needs access to your camera to take a picture of the ID and visitor."
         }
       ],
       [

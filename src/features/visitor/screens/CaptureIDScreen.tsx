@@ -18,7 +18,19 @@ export const CaptureIDScreen = () => {
   const [idCardUrl, setIdCardUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleCaptureID = async () => {
+  const handleCaptureID = () => {
+    Alert.alert(
+      'Select Camera',
+      'Which camera would you like to use?',
+      [
+        { text: 'Front Camera', onPress: () => openCamera(ImagePicker.CameraType.front) },
+        { text: 'Back Camera', onPress: () => openCamera(ImagePicker.CameraType.back) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const openCamera = async (cameraType: any) => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
@@ -29,6 +41,7 @@ export const CaptureIDScreen = () => {
         mediaTypes: ['images'],
         allowsEditing: true,
         quality: 0.8,
+        cameraType: cameraType,
       });
       if (!result.canceled && result.assets && result.assets.length > 0) {
         setIdCardUrl(result.assets[0].uri);
@@ -90,7 +103,7 @@ export const CaptureIDScreen = () => {
       };
       
       const { visitor, visit, pass } = await useCase.execute(payload);
-      navigation.navigate('CheckIn', { id: visitor.id });
+      navigation.navigate('VisitorDetails', { visitId: visit.id });
     } catch (error) {
       console.log('Error registering visitor:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to register visitor');

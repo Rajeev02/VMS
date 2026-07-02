@@ -43,25 +43,59 @@ export const VisitorsScreen = () => {
     }
   }, [routeParams?.filter]);
 
-  const fetchVisitors = async () => {
-    try {
-      const data = await VisitorListUseCase.getVisitsWithDetails();
-      setVisitors(data);
-    } catch (error) {
-      Logger.error('Failed to fetch visitors', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
-    fetchVisitors();
+    const firestore = require('@react-native-firebase/firestore').default;
+    setLoading(true);
+    let isMounted = true;
+
+    const unsubscribe = firestore().collection('visits').onSnapshot(async (snapshot: any) => {
+      try {
+        const promises = snapshot.docs.map(async (doc: any) => {
+          const visit = doc.data();
+          let visitor = null;
+          try {
+            const visitorDoc = await firestore().collection('visitors').doc(visit.visitorId).get();
+            if (visitorDoc.exists) visitor = visitorDoc.data();
+          } catch (e) {}
+
+          return {
+            id: doc.id,
+            visitorId: visit.visitorId,
+            name: visitor?.name || 'Unknown Visitor',
+            phone: visitor?.phone,
+            company: visitor?.company,
+            date: visit.scheduledDate,
+            time: visit.entryTime || 'Pending',
+            status: visit.status,
+            purpose: visit.purpose,
+            updatedAt: visit.updatedAt,
+          };
+        });
+
+        const enhancedVisits = await Promise.all(promises);
+        if (!isMounted) return;
+        enhancedVisits.sort((a, b) => new Date(b.updatedAt || 0).getTime() - new Date(a.updatedAt || 0).getTime());
+        setVisitors(enhancedVisits);
+      } catch (error) {
+        if (isMounted) Logger.error('Failed to fetch visitors', error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+          setRefreshing(false);
+        }
+      }
+    });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const onRefresh = useCallback(() => {
+    // onSnapshot automatically updates, but we can set refreshing state briefly
     setRefreshing(true);
-    fetchVisitors();
+    setTimeout(() => setRefreshing(false), 500);
   }, []);
 
   const filteredVisitors = React.useMemo(() => {
@@ -87,7 +121,7 @@ export const VisitorsScreen = () => {
   const renderItem = ({ item }: { item: VisitListItem }) => (
     <TouchableOpacity 
       style={styles.card}
-      onPress={() => navigation.navigate('VisitorDetails', { id: item.id })}
+      onPress={() => navigation.navigate('VisitorDetails', { visitId: item.id })}
     >
       <View style={styles.cardLeft}>
         <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -96,7 +130,7 @@ export const VisitorsScreen = () => {
         <View style={styles.cardInfo}>
           <Text style={[styles.visitorName, { color: theme.custom.colors.textPrimary }]}>{item.name}</Text>
           <Text style={[styles.visitorTime, { color: theme.custom.colors.textSecondary }]}>
-            {item.date}, {item.time}
+            {item.date ? new Date(item.date).toLocaleDateString() : 'No Date'}, {item.status === 'PENDING' ? 'Pending' : (item.time !== 'Pending' ? new Date(item.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pending')}
           </Text>
         </View>
       </View>

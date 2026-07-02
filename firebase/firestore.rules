@@ -15,15 +15,15 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isAuthenticated() && getUserRole() == 'ADMIN';
+      return isAuthenticated() && (getUserRole() == 'Super Admin' || getUserRole() == 'Company Admin');
     }
 
     function isSecurity() {
-      return isAuthenticated() && (getUserRole() == 'SECURITY' || getUserRole() == 'ADMIN');
+      return isAuthenticated() && (getUserRole() == 'Security Guard' || getUserRole() == 'Security Officer' || getUserRole() == 'Receptionist' || isAdmin());
     }
 
     function isHost() {
-      return isAuthenticated() && (getUserRole() == 'HOST' || getUserRole() == 'ADMIN');
+      return isAuthenticated() && (getUserRole() == 'Host' || isAdmin());
     }
 
     // users

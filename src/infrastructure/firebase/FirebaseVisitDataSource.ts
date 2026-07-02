@@ -12,24 +12,25 @@ export class FirebaseVisitDataSource implements IVisitDataSource {
   }
 
   async getAllVisits(): Promise<Visit[]> {
-    const snapshot = await this.collection.orderBy('expectedEntry', 'desc').get();
-    return snapshot.docs.map(doc => doc.data() as Visit);
+    const snapshot = await this.collection.get();
+    const visits = snapshot.docs.map(doc => doc.data() as Visit);
+    return visits.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }
 
   async getVisitsByVisitor(visitorId: string): Promise<Visit[]> {
     const snapshot = await this.collection
       .where('visitorId', '==', visitorId)
-      .orderBy('expectedEntry', 'desc')
       .get();
-    return snapshot.docs.map(doc => doc.data() as Visit);
+    const visits = snapshot.docs.map(doc => doc.data() as Visit);
+    return visits.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }
 
   async getVisitsByHost(hostId: string): Promise<Visit[]> {
     const snapshot = await this.collection
       .where('hostId', '==', hostId)
-      .orderBy('expectedEntry', 'desc')
       .get();
-    return snapshot.docs.map(doc => doc.data() as Visit);
+    const visits = snapshot.docs.map(doc => doc.data() as Visit);
+    return visits.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }
 
   async createVisit(visit: Partial<Visit>): Promise<Visit> {
@@ -51,7 +52,7 @@ export class FirebaseVisitDataSource implements IVisitDataSource {
   }
 
   subscribeToVisits(hostId: string, onUpdate: (visits: Visit[]) => void): () => void {
-    let query = this.collection.orderBy('expectedEntry', 'desc');
+    let query = this.collection as any;
     
     // If not admin/security, filter by hostId
     if (hostId) {
@@ -59,11 +60,12 @@ export class FirebaseVisitDataSource implements IVisitDataSource {
     }
 
     const unsubscribe = query.onSnapshot(
-      snapshot => {
-        const visits = snapshot.docs.map(doc => doc.data() as Visit);
+      (snapshot: any) => {
+        const visits = snapshot.docs.map((doc: any) => doc.data() as Visit);
+        visits.sort((a: Visit, b: Visit) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
         onUpdate(visits);
       },
-      error => {
+      (error: any) => {
         console.error('Visits subscription error:', error);
       }
     );

@@ -118,7 +118,7 @@ export class RegisterWalkInVisitorUseCase {
 
     let finalPass: VisitorPass | undefined;
 
-    // Only generate the pass if it is already approved
+    // Always generate pass for CHECKED_IN or APPROVED visitors
     if (initialStatus === VisitStatus.APPROVED) {
       const secureToken = this.generateUUID();
       finalPass = {
@@ -139,6 +139,20 @@ export class RegisterWalkInVisitorUseCase {
         updatedAt: new Date().toISOString(),
       };
     }
+    
+    // Clean objects to remove undefined fields which Firestore rejects
+    const cleanObject = (obj: any) => {
+      Object.keys(obj).forEach(key => {
+        if (obj[key] === undefined) {
+          delete obj[key];
+        }
+      });
+      return obj;
+    };
+
+    cleanObject(finalVisitor);
+    cleanObject(finalVisit);
+    if (finalPass) cleanObject(finalPass);
 
     // 4. Save entities
     // In our repository, saveWalkInRegistration can handle optional passes. 

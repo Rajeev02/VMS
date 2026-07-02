@@ -24,6 +24,14 @@ export const RolePermissionMap: Record<string, string[]> = {
     Permissions.REGISTER_WALK_IN,
     Permissions.MANUAL_VERIFY,
   ],
+  'Security Officer': [
+    Permissions.VIEW_ALL_VISITORS,
+    Permissions.SCAN_QR,
+    Permissions.CHECK_IN,
+    Permissions.CHECK_OUT,
+    Permissions.REGISTER_WALK_IN,
+    Permissions.MANUAL_VERIFY,
+  ],
   'Host': [
     Permissions.VIEW_OWN_VISITORS,
     Permissions.CREATE_PRE_APPROVED,

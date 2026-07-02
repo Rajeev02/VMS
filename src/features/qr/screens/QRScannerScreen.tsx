@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { StyleSheet, View, Alert, TouchableOpacity, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Text, useTheme, Button } from 'react-native-paper';
@@ -25,6 +25,8 @@ export const QRScannerScreen = () => {
   const [processing, setProcessing] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
   const [scanMode, setScanMode] = useState<'CHECK_IN' | 'CHECKPOINT' | 'CHECK_OUT'>('CHECK_IN');
+  
+  const isProcessingRef = useRef(false);
 
   const checkAndRequestPermission = async () => {
     const currentStatus = Camera.getCameraPermissionStatus();
@@ -51,7 +53,8 @@ export const QRScannerScreen = () => {
   const codeScanner = useCodeScanner({
     codeTypes: ['qr'],
     onCodeScanned: async (codes) => {
-      if (processing || codes.length === 0 || !codes[0].value) return;
+      if (isProcessingRef.current || processing || codes.length === 0 || !codes[0].value) return;
+      isProcessingRef.current = true;
       setProcessing(true);
       
       const qrValue = codes[0].value;
@@ -67,7 +70,11 @@ export const QRScannerScreen = () => {
           }
 
           Alert.alert('Scan Successful', 'Navigating to check-in...');
-          navigation.navigate('CheckIn', { visitId: result.pass?.visitId, qrToken: qrValue });
+          navigation.navigate('CheckIn', { 
+            visitId: result.pass?.visitId, 
+            qrToken: qrValue,
+            visitorId: result.pass?.visitorId 
+          });
         } else if (scanMode === 'CHECKPOINT') {
           // Checkpoint mode
           const validateCase = new ValidateQrScanUseCase();
@@ -107,7 +114,10 @@ export const QRScannerScreen = () => {
         Logger.error('QR Validation failed', e);
         Alert.alert('Scan Failed', e.message || 'The pass is invalid or expired.');
       } finally {
-        setTimeout(() => setProcessing(false), 2000);
+        setTimeout(() => {
+          setProcessing(false);
+          isProcessingRef.current = false;
+        }, 2000);
       }
     },
   });

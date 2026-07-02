@@ -18,9 +18,9 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
     return {
       id: userCredential.user.uid,
       email: data.email || email,
-      name: data.name || 'Unknown',
-      role: data.role || 'Unknown',
-      organizationId: data.organizationId || 'Unknown',
+      name: (!data.name || data.name === 'Unknown') ? 'Rajeev Joshi' : data.name,
+      role: (!data.role || data.role === 'Unknown') ? 'User' : data.role,
+      organizationId: data.organizationId || 'DefaultOrg',
       permissions: getPermissionsForRole(data.role),
     };
   }
@@ -43,9 +43,9 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
       return {
         id: currentUser.uid,
         email: data.email || currentUser.email,
-        name: data.name || 'Unknown',
-        role: data.role || 'Unknown',
-        organizationId: data.organizationId || 'Unknown',
+        name: (!data.name || data.name === 'Unknown') ? 'Rajeev Joshi' : data.name,
+        role: (!data.role || data.role === 'Unknown') ? 'Security Guard' : data.role,
+        organizationId: data.organizationId || 'DefaultOrg',
         permissions: getPermissionsForRole(data.role),
       };
     } catch (error) {
@@ -59,5 +59,25 @@ export class FirebaseAuthDataSource implements IAuthDataSource {
     const currentUser = authInstance.currentUser;
     if (!currentUser) throw new Error('No authenticated user');
     return await currentUser.getIdToken(true);
+  }
+
+  async updateProfile(name: string, photoUrl?: string): Promise<void> {
+    const authInstance = getAuth();
+    const currentUser = authInstance.currentUser;
+    if (!currentUser) throw new Error('No authenticated user');
+
+    // Update in Firestore
+    await firestore().collection('users').doc(currentUser.uid).update({
+      name,
+      ...(photoUrl && { photoUrl })
+    });
+  }
+
+  async updatePassword(password: string): Promise<void> {
+    const authInstance = getAuth();
+    const currentUser = authInstance.currentUser;
+    if (!currentUser) throw new Error('No authenticated user');
+
+    await (currentUser as any).updatePassword(password);
   }
 }

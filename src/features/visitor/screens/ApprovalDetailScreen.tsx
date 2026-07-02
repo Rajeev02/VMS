@@ -68,30 +68,60 @@ export const ApprovalDetailScreen = () => {
           <Text style={[styles.company, { color: theme.custom.colors.textSecondary }]}>{visitor?.company}</Text>
         </View>
 
-        <View style={[styles.infoCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Visit Info</Text>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Purpose:</Text>
-            <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.purpose}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Time:</Text>
-            <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>
-              {new Date(visit.entryTime || visit.createdAt).toLocaleString()}
-            </Text>
-          </View>
-          {visit.vehicleNumber && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Vehicle:</Text>
-              <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.vehicleNumber}</Text>
+        <View style={styles.cardsContainer}>
+          <View style={[styles.infoCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
+            <View style={styles.sectionHeader}>
+              <Icon name="person-outline" size={20} color={theme.colors.primary} />
+              <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Identity Details</Text>
             </View>
-          )}
-          {visit.notes && (
-            <View style={styles.infoRow}>
-              <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Notes:</Text>
-              <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.notes}</Text>
+            {visitor?.phone && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Phone:</Text>
+                <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visitor.phone}</Text>
+              </View>
+            )}
+            {visitor?.email && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Email:</Text>
+                <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visitor.email}</Text>
+              </View>
+            )}
+            {visitor?.governmentId && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Gov ID:</Text>
+                <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>**** {String(visitor.governmentId).slice(-4)}</Text>
+              </View>
+            )}
+          </View>
+
+          <View style={[styles.infoCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border, marginTop: 16 }]}>
+            <View style={styles.sectionHeader}>
+              <Icon name="event-note" size={20} color={theme.colors.primary} />
+              <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Visit Details</Text>
             </View>
-          )}
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Purpose:</Text>
+              <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.purpose}</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Time:</Text>
+              <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>
+                {new Date(visit.entryTime || visit.createdAt).toLocaleString()}
+              </Text>
+            </View>
+            {visit.vehicleNumber && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Vehicle:</Text>
+                <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.vehicleNumber}</Text>
+              </View>
+            )}
+            {visit.notes && (
+              <View style={styles.infoRow}>
+                <Text style={[styles.infoLabel, { color: theme.custom.colors.textSecondary }]}>Notes:</Text>
+                <Text style={[styles.infoValue, { color: theme.custom.colors.textPrimary }]}>{visit.notes}</Text>
+              </View>
+            )}
+          </View>
         </View>
       </ScrollView>
 
@@ -141,15 +171,22 @@ const styles = StyleSheet.create({
   },
   name: { fontSize: 24, fontWeight: 'bold' },
   company: { fontSize: 16, marginTop: 4 },
+  cardsContainer: { paddingBottom: 24 },
   infoCard: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginBottom: 16 },
-  infoRow: { flexDirection: 'row', marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16 },
+  sectionTitle: { fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
+  infoRow: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-start' },
   infoLabel: { flex: 1, fontSize: 14 },
-  infoValue: { flex: 2, fontSize: 14, fontWeight: '500' },
+  infoValue: { flex: 2, fontSize: 14, fontWeight: '600', textAlign: 'right' },
   footer: {
     flexDirection: 'row',
     padding: 24,

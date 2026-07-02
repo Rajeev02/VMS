@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, KeyboardAvoidingView, Platform, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
@@ -71,11 +71,23 @@ export const WalkInRegistrationScreen = () => {
     setPhotoUrl('');
   };
 
-  const handleTakePhoto = async () => {
+  const handleTakePhoto = () => {
+    Alert.alert(
+      'Select Camera',
+      'Which camera would you like to use?',
+      [
+        { text: 'Front Camera', onPress: () => openCamera(ImagePicker.CameraType.front) },
+        { text: 'Back Camera', onPress: () => openCamera(ImagePicker.CameraType.back) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const openCamera = async (cameraType: any) => {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        alert('Sorry, we need camera permissions to make this work!');
+        Alert.alert('Permission needed', 'Sorry, we need camera permissions to make this work!');
         return;
       }
 
@@ -84,6 +96,7 @@ export const WalkInRegistrationScreen = () => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
+        cameraType: cameraType,
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {

@@ -10,8 +10,9 @@ import { Visit } from '../../../domain/models/Visit';
 
 export interface ProcessCheckInPayload {
   visitId: string;
-  qrToken: string;
+  qrToken?: string;
   newPhotoLocalUri?: string;
+  badgeNumber?: string;
 }
 
 export class ProcessCheckInUseCase {
@@ -53,7 +54,7 @@ export class ProcessCheckInUseCase {
 
     // 3. Execute the Firestore Check-In Transaction safely in the Data layer
     Logger.info(`[ProcessCheckInUseCase] Delegating to VisitorRepository to run Firestore transaction.`);
-    await VisitorRepository.executeCheckInTransaction(payload.visitId, payload.qrToken);
+    await VisitorRepository.executeCheckInTransaction(payload.visitId, payload.qrToken, payload.badgeNumber);
 
     // 3.5 Log the audit event
     await this.auditLogger.logEvent({

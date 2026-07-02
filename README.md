@@ -68,6 +68,7 @@ For manual testing, you can use the following mock credentials. These route you 
 | :--- | :--- | :--- |
 | **Host** | `host@company.com` | `password123` |
 | **Security Guard** | `guard@company.com` | `password123` |
+| **Security Officer** | `officer@company.com` | `password123` |
 | **Receptionist** | `admin@company.com` | `password123` |
 
 *(Note: In the local dev environment, the Mock Auth Service bypasses actual Firebase Auth, but enforces the role bindings)*.

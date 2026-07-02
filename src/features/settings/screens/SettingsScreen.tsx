@@ -8,10 +8,12 @@ import { RootState } from '../../../app/store';
 import { logout } from '../../auth/authSlice';
 import { toggleTheme } from '../themeSlice';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 export const SettingsScreen = () => {
   const theme = useTheme<AppTheme>();
   const dispatch = useDispatch();
+  const navigation = useNavigation<any>();
   const user = useSelector((state: RootState) => state.auth.user);
   const isDarkMode = useSelector((state: RootState) => state.theme.isDarkMode);
   
@@ -25,8 +27,11 @@ export const SettingsScreen = () => {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.custom.colors.background }]}>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: theme.custom.colors.textPrimary }]}>Settings</Text>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={{ padding: 8, marginRight: 8, marginLeft: -8 }}>
+          <Icon name="arrow-back" size={24} color={theme.custom.colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={[styles.headerTitle, { color: theme.custom.colors.textPrimary }]}>Profile</Text>
       </View>
 
       <ScrollView style={styles.scroll}>
@@ -37,7 +42,7 @@ export const SettingsScreen = () => {
             </Text>
           </View>
           <Text style={[styles.userName, { color: theme.custom.colors.textPrimary }]}>{user?.name || 'Rajeev Joshi'}</Text>
-          <Text style={[styles.userRole, { color: theme.custom.colors.textSecondary }]}>{user?.role || 'Security Officer'}</Text>
+          <Text style={[styles.userRole, { color: theme.custom.colors.textSecondary }]}>{user?.role || 'User'}</Text>
         </View>
 
         <View style={styles.section}>
@@ -45,13 +50,13 @@ export const SettingsScreen = () => {
           <SettingsItem 
             icon="person-outline" 
             title="Edit Profile" 
-            onPress={() => {}} 
+            onPress={() => navigation.navigate('EditProfile')} 
             theme={theme} 
           />
           <SettingsItem 
             icon="lock-outline" 
             title="Change Password" 
-            onPress={() => {}} 
+            onPress={() => navigation.navigate('ChangePassword')} 
             theme={theme} 
           />
         </View>

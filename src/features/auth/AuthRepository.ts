@@ -88,7 +88,12 @@ export class AuthRepository {
       if (currentUser) {
         return currentUser;
       }
-      return null;
+      
+      // Fallback: check SecureStorage
+      // Firebase auth state initialization is async, so we might hit this before Firebase is ready.
+      // Returning the cached session ensures the user isn't unexpectedly logged out on app launch.
+      const storedUser = await SecureStorage.getItem<UserSession>(this.SESSION_KEY);
+      return storedUser || null;
     } catch (e) {
       Logger.error('[AuthRepository] Failed to restore session', e);
       return null;

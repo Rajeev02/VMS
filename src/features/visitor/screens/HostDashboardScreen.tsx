@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppTheme } from '../../../theme/theme';
 import { GetPendingRequestsUseCase } from '../usecases/GetPendingRequestsUseCase';
 import { Visit } from '../../../domain/models/Visit';
@@ -13,26 +14,53 @@ type PendingRequest = { visit: Visit, visitor: Visitor | null };
 export const HostDashboardScreen = () => {
   const theme = useTheme<AppTheme>();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadRequests();
+    const firestore = require('@react-native-firebase/firestore').default;
+    setLoading(true);
+    let isMounted = true;
+
+    const unsubscribe = firestore()
+      .collection('visits')
+      .where('status', '==', 'PENDING')
+      .onSnapshot(async (snapshot: any) => {
+        try {
+          const promises = snapshot.docs.map(async (doc: any) => {
+            const visit = { id: doc.id, ...doc.data() } as Visit;
+            let visitor = null;
+            try {
+              const visitorDoc = await firestore().collection('visitors').doc(visit.visitorId).get();
+              if (visitorDoc.exists) visitor = { id: visitorDoc.id, ...visitorDoc.data() } as Visitor;
+            } catch (e) {}
+
+            return { visit, visitor };
+          });
+          
+          const results = await Promise.all(promises);
+          if (!isMounted) return;
+          results.sort((a, b) => new Date(b.visit.updatedAt || 0).getTime() - new Date(a.visit.updatedAt || 0).getTime());
+          setRequests(results);
+        } catch (error) {
+          if (isMounted) console.log('Error loading pending requests:', error);
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
-  const loadRequests = async () => {
+  const loadRequests = () => {
+    // onSnapshot handles real-time updates, but we keep this for the refresh button
     setLoading(true);
-    try {
-      const useCase = new GetPendingRequestsUseCase();
-      // Hardcoded hostId for Phase 2 demo
-      const result = await useCase.execute('Unknown Host');
-      setRequests(result);
-    } catch (error) {
-      console.log('Error loading pending requests:', error);
-    } finally {
-      setLoading(false);
-    }
+    setTimeout(() => setLoading(false), 500);
   };
 
   const renderItem = ({ item }: { item: PendingRequest }) => (
@@ -62,7 +90,7 @@ export const HostDashboardScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: theme.custom.colors.background }]}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={[styles.headerTitle, { color: theme.custom.colors.textPrimary }]}>Pending Approvals</Text>
         <TouchableOpacity onPress={loadRequests}>
           <Icon name="refresh" size={24} color={theme.colors.primary} />
@@ -84,6 +112,10 @@ export const HostDashboardScreen = () => {
           keyExtractor={item => item.visit.id}
           renderItem={renderItem}
           contentContainerStyle={styles.list}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={5}
+          removeClippedSubviews={true}
         />
       )}
     </View>
@@ -97,7 +129,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 16,
-    paddingTop: 48,
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
   },

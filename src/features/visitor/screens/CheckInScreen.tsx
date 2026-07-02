@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView, Alert, Image } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
@@ -9,6 +9,8 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { VisitorRepository } from '../VisitorRepository';
 import { ProcessCheckInUseCase } from '../usecases/ProcessCheckInUseCase';
+import * as ImagePicker from 'expo-image-picker';
+import Logger from '../../../core/logger/Logger';
 
 export const CheckInScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -18,18 +20,25 @@ export const CheckInScreen = () => {
 
   const [visitor, setVisitor] = useState<any>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
 
   React.useEffect(() => {
+    let isMounted = true;
     const loadVisitor = async () => {
-      if (route.params?.passId) {
-        // Fallback for demo: if we pass passId, use getVisitorById or similar.
-        // Assuming we could fetch visitor by passId. For now we will fetch by QR which matches token.
-        const v = await VisitorRepository.getVisitorByPassQr(route.params.passId);
-        if (v) setVisitor(v);
+      if (route.params?.visitorId) {
+        const firestore = require('@react-native-firebase/firestore').default;
+        const v = await firestore().collection('visitors').doc(route.params.visitorId).get();
+        if (v.exists && isMounted) setVisitor({ id: v.id, ...v.data() });
+      } else if (route.params?.qrToken) {
+        const v = await VisitorRepository.getVisitorByPassQr(route.params.qrToken);
+        if (v && isMounted) setVisitor(v);
       }
     };
     loadVisitor();
-  }, [route.params?.passId]);
+    return () => {
+      isMounted = false;
+    };
+  }, [route.params]);
 
   const handleCheckIn = async () => {
     if (!route.params?.visitId) {
@@ -58,7 +67,9 @@ export const CheckInScreen = () => {
       
       await useCase.execute({
         visitId: route.params.visitId,
-        qrToken: qrToken
+        qrToken: qrToken,
+        badgeNumber: badgeNumber,
+        newPhotoLocalUri: photoUri || undefined
       });
       
       Alert.alert('Check-In Successful', 'The visitor has been checked in and the host has been notified.', [
@@ -69,6 +80,41 @@ export const CheckInScreen = () => {
       Alert.alert('Check-In Failed', e.message || 'An error occurred during check-in.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleCapturePhoto = () => {
+    Alert.alert(
+      'Select Camera',
+      'Which camera would you like to use?',
+      [
+        { text: 'Front Camera', onPress: () => openCamera(ImagePicker.CameraType.front) },
+        { text: 'Back Camera', onPress: () => openCamera(ImagePicker.CameraType.back) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const openCamera = async (cameraType: any) => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission required', 'Camera permission is required to capture a photo.');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        cameraType: cameraType,
+      });
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      Logger.error('Failed to capture photo', error);
+      Alert.alert('Error', 'An error occurred while capturing the photo.');
     }
   };
 
@@ -90,12 +136,16 @@ export const CheckInScreen = () => {
           <View style={styles.content}>
             
             <View style={styles.photoContainer}>
-              <View style={[styles.photoPlaceholder, { backgroundColor: theme.colors.primary + '20' }]}>
-                <Icon name="person" size={60} color={theme.colors.primary} />
-              </View>
+              {photoUri ? (
+                <Image source={{ uri: photoUri }} style={styles.photoPlaceholder} />
+              ) : (
+                <View style={[styles.photoPlaceholder, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <Icon name="person" size={60} color={theme.colors.primary} />
+                </View>
+              )}
               <SecondaryButton 
-                title="Capture Visitor Photo" 
-                onPress={() => {}} 
+                title={photoUri ? "Retake Visitor Photo" : "Capture Visitor Photo"} 
+                onPress={handleCapturePhoto} 
                 style={styles.captureButton} 
               />
             </View>

@@ -12,4 +12,6 @@ export interface IAuthDataSource {
   logout(): Promise<void>;
   getCurrentUser(): Promise<AuthUser | null>;
   refreshToken(): Promise<string>;
+  updateProfile(name: string, photoUrl?: string): Promise<void>;
+  updatePassword(password: string): Promise<void>;
 }

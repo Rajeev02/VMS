@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
 import { TextInput, Button, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
@@ -8,7 +8,6 @@ import Logger from '../../../core/logger/Logger';
 import { RegisterWalkInVisitorUseCase } from '../usecases/RegisterWalkInVisitorUseCase';
 import { ServiceLocator } from '../../../core/di/ServiceLocator';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const CreateVisitorScreen = () => {
@@ -23,22 +22,37 @@ export const CreateVisitorScreen = () => {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleCapturePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission Denied', 'Camera permission is required to capture a photo.');
-      return;
-    }
+  const handleTakePhoto = () => {
+    Alert.alert(
+      'Select Camera',
+      'Which camera would you like to use?',
+      [
+        { text: 'Front Camera', onPress: () => openCamera(ImagePicker.CameraType.front) },
+        { text: 'Back Camera', onPress: () => openCamera(ImagePicker.CameraType.back) },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.5,
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+  const openCamera = async (cameraType: any) => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Sorry, we need camera permissions to make this work!');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        cameraType: cameraType,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setPhotoUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.log('Error taking photo:', error);
     }
   };
 
@@ -118,7 +132,7 @@ export const CreateVisitorScreen = () => {
           numberOfLines={3}
         />
 
-        <TouchableOpacity style={styles.photoContainer} onPress={handleCapturePhoto}>
+        <TouchableOpacity style={styles.photoContainer} onPress={handleTakePhoto}>
           {photoUri ? (
             <Image source={{ uri: photoUri }} style={styles.photo} />
           ) : (

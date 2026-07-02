@@ -68,8 +68,12 @@ export const VerifyWithoutPassScreen = () => {
   };
 
   const handleVerify = () => {
-    if (result?.pass) {
-      navigation.navigate('CheckIn', { passId: result.pass.id });
+    if (result?.visit && result?.visitor) {
+      navigation.navigate('CheckIn', { 
+        visitId: result.visit.id,
+        qrToken: result.pass?.qrToken,
+        visitorId: result.visitor.id 
+      });
     }
   };
 

@@ -21,6 +21,9 @@ import { VerifyWithoutPassScreen } from '../features/visitor/screens/VerifyWitho
 import { HostDashboardScreen } from '../features/visitor/screens/HostDashboardScreen';
 import { ApprovalDetailScreen } from '../features/visitor/screens/ApprovalDetailScreen';
 
+import { EditProfileScreen } from '../features/settings/screens/EditProfileScreen';
+import { ChangePasswordScreen } from '../features/settings/screens/ChangePasswordScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -89,15 +92,6 @@ const TabNavigator = () => {
           headerTitle: 'Pending Approvals'
         }}
       />
-      <Tab.Screen 
-        name="Settings" 
-        component={SettingsScreen} 
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="settings" color={color} size={size} />
-          ),
-        }}
-      />
     </Tab.Navigator>
   );
 };
@@ -111,6 +105,9 @@ export const AppNavigator = () => {
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ headerShown: false, title: 'Check-In' }} />
       <Stack.Screen name="VerifyWithoutPass" component={VerifyWithoutPassScreen} options={{ headerShown: false, title: 'Verify Identity' }} />
       <Stack.Screen name="ApprovalDetail" component={ApprovalDetailScreen} options={{ headerShown: false, title: 'Approval Details' }} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} options={{ headerShown: false, title: 'Edit Profile' }} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} options={{ headerShown: false, title: 'Change Password' }} />
+      <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 };

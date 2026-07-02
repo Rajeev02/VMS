@@ -85,16 +85,21 @@ export class VisitorRepository {
     });
   }
 
-  static async executeCheckInTransaction(visitId: string, qrToken: string): Promise<void> {
+  static async executeCheckInTransaction(visitId: string, qrToken?: string, badgeNumber?: string): Promise<void> {
     Logger.info(`[VisitorRepository] executeCheckInTransaction visitId=${visitId} qrToken=${qrToken}`);
     const firestore = require('@react-native-firebase/firestore').default;
     
     // Using Firestore directly here as requested by User to retain transaction safety
-    const passesSnapshot = await firestore().collection('visitor_passes').where('qrToken', '==', qrToken).limit(1).get();
-    if (passesSnapshot.empty) {
-        throw new Error('Pass not found or invalid in Firestore.');
+    let passDoc: any = null;
+    if (qrToken) {
+      const passesSnapshot = await firestore().collection('visitor_passes').where('qrToken', '==', qrToken).limit(1).get();
+      if (!passesSnapshot.empty) passDoc = passesSnapshot.docs[0];
+      else throw new Error('Pass not found or invalid in Firestore.');
+    } else {
+      const passesSnapshot = await firestore().collection('visitor_passes').where('visitId', '==', visitId).limit(1).get();
+      if (!passesSnapshot.empty) passDoc = passesSnapshot.docs[0];
     }
-    const passDoc = passesSnapshot.docs[0];
+    
     const visitRef = firestore().collection('visits').doc(visitId);
 
     await firestore().runTransaction(async (transaction: any) => {
@@ -112,7 +117,8 @@ export class VisitorRepository {
         transaction.update(visitRef, {
             status: VisitStatus.CHECKED_IN,
             entryTime: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            ...(badgeNumber ? { badgeNumber } : {})
         });
 
         // Update Pass status

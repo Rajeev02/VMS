@@ -29,27 +29,20 @@ export const VisitorDetailsScreen = () => {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   
-  useEffect(() => {
-    fetchDetails();
-  }, [route.params?.visitId]);
-
   const fetchDetails = async () => {
     try {
+      setLoading(true);
       if (route.params?.visitId) {
-        // Fetch Visit
         const currentVisit = await VisitRepository.getById(route.params.visitId);
         if (currentVisit) {
           setVisit(currentVisit);
           
-          // Fetch Visitor
           const currentVisitor = await VisitorRepository.getVisitorById(currentVisit.visitorId);
           if (currentVisitor) {
             setVisitor(currentVisitor);
           }
           
-          // Fetch Audit Logs for Timeline (Mock filter for this specific visit)
           const logs = await AuditRepository.getLogsForEntity('VISIT', currentVisit.id);
-          // Sort ascending for timeline display
           setAuditLogs(logs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()));
         }
       }
@@ -60,11 +53,21 @@ export const VisitorDetailsScreen = () => {
     }
   };
 
+  useEffect(() => {
+    fetchDetails();
+  }, [route.params?.visitId]);
+
   const handleUpdateStatus = async (newStatus: VisitStatus) => {
     if (!visit) return;
     try {
       setLoading(true);
-      await VisitRepository.updateVisit(visit.id, { status: newStatus });
+      if (newStatus === VisitStatus.APPROVED || newStatus === VisitStatus.REJECTED) {
+        const { ProcessApprovalUseCase } = require('../usecases/ProcessApprovalUseCase');
+        const useCase = new ProcessApprovalUseCase();
+        await useCase.execute(visit.id, newStatus === VisitStatus.APPROVED ? 'APPROVE' : 'REJECT', visit.hostId);
+      } else {
+        await VisitRepository.updateVisit(visit.id, { status: newStatus });
+      }
       await fetchDetails(); // Refresh details
     } catch (e) {
       Logger.error('Failed to update status', e);

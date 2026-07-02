@@ -2,6 +2,7 @@ import { VisitorRepository } from '../VisitorRepository';
 import { Visit } from '../../../domain/models/Visit';
 import { VisitorPass } from '../../../domain/models/VisitorPass';
 import { VisitStatus, PassStatus } from '../../../domain/models/enums';
+import { VisitorPassRepository } from '../../../domain/repositories/VisitorPassRepository';
 import { NotificationFacade } from '../../notifications/NotificationFacade';
 import { IAuditLogService, AuditAction } from '../../../domain/services/IAuditLogService';
 import { ServiceLocator } from '../../../core/di/ServiceLocator';
@@ -45,21 +46,26 @@ export class ProcessApprovalUseCase {
 
     if (action === 'APPROVE') {
       Logger.info(`[ProcessApprovalUseCase] Triggering pass generation for approved visit ${visitId}`);
-      // Assuming a pass is generated here
+      
+      const secureToken = this.generateUUID();
+      const passId = this.generateUUID();
+
       const pass: VisitorPass = {
-        id: 'mock-pass-id',
+        id: passId,
         visitId,
         visitorId: updatedVisit.visitorId,
-        passId: `VX-APRV-${Math.floor(Math.random() * 9000)}`,
-        qrToken: 'mock-token',
+        passId: `VX-APRV-${Math.floor(1000 + Math.random() * 9000)}`,
+        qrToken: secureToken,
         status: PassStatus.GENERATED,
-        publicUrl: 'https://rajeev02.github.io/vms/pass.html?token=mock',
+        publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${secureToken}`,
         validFrom: updatedVisit.entryTime || new Date().toISOString(),
         validUntil: updatedVisit.expectedExitTime || new Date(Date.now() + 2*3600*1000).toISOString(),
         gracePeriodMinutes: 30,
         generatedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
+      
+      await VisitorPassRepository.createPass(pass);
       
       await this.auditLogger.logEvent({
         action: AuditAction.PASS_GENERATED,
@@ -78,6 +84,13 @@ export class ProcessApprovalUseCase {
     }
 
     return updatedVisit;
+  }
+
+  private generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+      return v.toString(16);
+    });
   }
 }
 
