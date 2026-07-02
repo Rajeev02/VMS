@@ -1,43 +1,82 @@
-# Technical Design & Architectural Considerations
+# Technical Design Document
 
-This document outlines the technical decisions, trade-offs, and architectural considerations made prior to and during the implementation of the Enterprise Visitor Management System (VMS).
+This document outlines the core technical decisions, data schemas, and state management strategies for the Enterprise Visitor Management System (VMS).
 
-## 1. Framework Selection: Expo (Prebuild / Config Plugins) vs Bare React Native CLI
-**Consideration:** Enterprise applications often require deep native integrations (e.g., Camera, Secure Enclave, MDM solutions). Historically, this pushed teams toward Bare React Native CLI. However, maintaining iOS/Android folders leads to difficult upgrades and native build failures over time.
-**Decision:** We chose **Expo with Custom Development Clients (Prebuild)**.
-**Why:** It provides the native capabilities of a bare workflow without the maintenance overhead of managing `ios` and `android` directories. Native dependencies (like `react-native-vision-camera` and `expo-secure-store`) are injected deterministically via Config Plugins inside `app.json`.
+## 1. Firebase Data Models
 
-## 2. Directory Structure: Feature-First vs Layer-First
-**Consideration:** As applications grow, a layer-first structure (grouping by `components`, `screens`, `hooks`) becomes extremely difficult to navigate because related business logic is scattered across the repository.
-**Decision:** We chose a **Feature-First Architecture**.
-**Why:** The codebase is partitioned by business domain (`auth`, `visitor`, `qr`, `dashboard`). Each feature contains its own screens, components, and state slices. This enforces strict separation of concerns, prevents circular dependencies, and makes it trivial for large teams to work on different modules simultaneously without merge conflicts.
+The system relies on a NoSQL document database (Firestore) with three primary collections: `visitors`, `visits`, and `visitor_passes`. This normalization prevents massive document bloat.
 
-## 3. Styling & Theming
-**Consideration:** Maintaining consistent UI spacing, colors, and typography across a large mobile application requires strict enforcement. Options included NativeWind (Tailwind), Restyle (Shopify), or standard React Native StyleSheets with a centralized Theme Provider.
-**Decision:** We opted for a **Centralized Theme Provider with React Native Paper**.
-**Why:** Following the project constraints to avoid utility-first CSS frameworks like NativeWind, we built a strict, centralized token system (`src/theme/theme.ts`). React Native Paper provides accessible, Material Design-compliant baseline components, while our custom theme tokens ensure that any new component strictly adheres to the enterprise color palette and spacing rules.
+### `visitors` Collection
+Stores the immutable identity of the person.
+```typescript
+interface Visitor {
+  id: string;              // UUID
+  name: string;
+  phone?: string;
+  email?: string;
+  company?: string;
+  governmentId?: string;
+  photoUrl?: string;       // URI to Firebase Storage
+  status: VisitorStatus;   // ACTIVE, BLOCKED, BLACKLISTED
+}
+```
 
-## 4. State Management: UI State vs Server State
-**Consideration:** Mixing asynchronous network calls with synchronous UI state inside standard React Contexts or basic Redux setups leads to bloated components and "prop drilling".
-**Decision:** We utilized **Redux Toolkit (RTK)**.
-**Why:** RTK clearly separates synchronous application state (like User Sessions and Permissions) from the UI layer. For data fetching, a centralized Repository pattern was implemented, allowing us to easily swap the current mock API implementations with RTK Query or Apollo GraphQL in the future without touching the UI components.
+### `visits` Collection
+Stores the lifecycle of a specific entry attempt.
+```typescript
+interface Visit {
+  id: string;              // UUID
+  visitorId: string;       // Ref -> visitors.id
+  hostId: string;          // Employee Host ID
+  purpose: string;
+  status: VisitStatus;     // PENDING, APPROVED, CHECKED_IN, COMPLETED
+  entryTime?: string;      // ISO string
+  expectedExitTime?: string;
+}
+```
 
-## 5. Security & Authorization (RBAC vs PBAC)
-**Consideration:** Hardcoding roles (e.g., `if (user.role === 'ADMIN')`) into UI components is an anti-pattern. If a "Host" role suddenly requires access to a feature previously only for "Admins", the entire UI layer must be refactored.
-**Decision:** We implemented **Permission-Based Access Control (PBAC)** via a `PermissionGuard` wrapper.
-**Why:** The backend returns an array of specific permissions (e.g., `SCAN_QR`, `CHECK_IN`). UI buttons and navigation tabs are rendered conditionally based on these discrete permissions rather than the user's overarching role. This makes the frontend completely agnostic to business-level role changes. Additionally, all JWT tokens are stored securely in the device's hardware keychain using `expo-secure-store`.
+### `visitor_passes` Collection
+Stores the secure QR tokens used for access control.
+```typescript
+interface VisitorPass {
+  id: string;              // UUID
+  visitId: string;         // Ref -> visits.id
+  visitorId: string;       // Ref -> visitors.id
+  qrToken: string;         // Secure random token
+  status: PassStatus;      // GENERATED, EXPIRED, REVOKED
+  validFrom: string;       // Time window start
+  validUntil: string;      // Time window end
+}
+```
 
-## 6. Offline-First Resilience
-**Consideration:** Visitor Management Systems are often used in building lobbies or basements where cellular and Wi-Fi connectivity is spotty. The app cannot crash or lose check-in data when a network request drops.
-**Decision:** We implemented a custom **OfflineManager**.
-**Why:** It intercepts API requests. If the device is offline (`@react-native-community/netinfo`), the request is serialized and stored locally. A background listener automatically processes the queue and syncs the data with the backend the moment network connectivity is restored.
+### `system_audit_logs` Collection
+Immutable ledger for SOC2/GDPR compliance.
+```typescript
+interface AuditLog {
+  id: string;
+  timestamp: string;
+  action: AuditAction;     // CHECK_IN, CREATE, VERIFY
+  userId: string;          // Guard/Admin performing the action
+  visitId?: string;
+  details: object;
+}
+```
 
-## 7. Performance & Memory Management (QR Scanner)
-**Consideration:** Continuous use of the camera sensor in a React Native application is a notorious source of memory leaks, device overheating, and battery drain.
-**Decision:** We implemented strict lifecycle hooks on the `QRScannerScreen` using `react-native-vision-camera`.
-**Why:** By utilizing React Navigation's `useIsFocused` hook, we guarantee that the camera sensor is immediately torn down and resources are released to the OS the millisecond the user navigates away from the scanner tab. Furthermore, all large lists (like the Visitor List) utilize `@shopify/flash-list` to recycle views and maintain 60 FPS scrolling, avoiding the memory bloat of standard FlatLists.
+## 2. React Native & UI Strategy
 
-## 8. Error Handling
-**Consideration:** A white screen of death is unacceptable in an enterprise environment.
-**Decision:** We implemented a Global **ErrorBoundary** and a Centralized **Logger**.
-**Why:** The Error Boundary catches React rendering errors and displays a friendly fallback UI with a retry mechanism. The Centralized Logger replaces `console.log` ensuring that in production, sensitive user data is never accidentally leaked to standard output, while still allowing for structured error reporting to services like Sentry.
+### Navigation
+We use `@react-navigation/native-stack` and `@react-navigation/bottom-tabs`. The routing dynamically switches between `AuthNavigator` and `AppNavigator` based on the Redux `isAuthenticated` state.
+
+### State Management (Redux Toolkit)
+- **`authSlice`**: Stores the JWT token, current user ID, and active Role.
+- **`themeSlice`**: Manages Light/Dark mode toggles and dynamic custom design tokens.
+- **Local Component State**: Ephemeral UI states (like loading spinners, active dashboard tabs, form inputs) are managed locally via `useState` to avoid Redux bloat.
+
+### Styling & Theming
+We utilize `react-native-paper` combined with custom design tokens. A unified `theme.ts` file provides centralized access to colors, fonts, and spacing, ensuring consistent aesthetics across the massive component library.
+
+## 3. Transaction Safety (Firestore)
+
+To prevent race conditions at scale (e.g., two guards scanning the same QR code at two different gates simultaneously), we rely on Firebase native transactions (`runTransaction`).
+
+In `VisitorRepository.executeCheckInTransaction`, the transaction explicitly locks the `Visit` and `VisitorPass` documents. It first checks if the status is already `CHECKED_IN`—if it is, the transaction aborts. If not, it updates both documents simultaneously. This guarantees data integrity and prevents duplicate check-ins.

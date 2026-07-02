@@ -1,105 +1,66 @@
-# Roles, Workflows, and Access Control
+# Roles & Business Workflows
 
-The Visitor Management System (VMS) operates on a strict Role-Based Access Control (RBAC) engine. This document outlines every role in the system, their specific feature access, and their standard operational workflows.
-
----
-
-## 1. Receptionist
-
-**Role Summary:** The primary operator at the front desk. Responsible for managing walk-ins, overseeing the daily calendar of visits, and intervening when manual approvals are required.
-
-**Feature Access (Permissions):**
-- ✅ `VIEW_ALL_VISITORS` (Can see all past, active, and upcoming visits across the company)
-- ✅ `REGISTER_WALK_IN` (Can manually register a new visitor without an invite)
-- ✅ `CREATE_PRE_APPROVED` (Can pre-approve VIPs or expected guests)
-- ✅ `CHECK_IN` & `CHECK_OUT` (Can manually check visitors in/out if the QR scanner is down)
-- ❌ Cannot manage users or system settings.
-
-**Standard Workflow:**
-1. Log in to the dashboard to view "Today's Visits" and "Pending" arrivals.
-2. When a walk-in visitor arrives, navigate to the `CreateVisitor` flow to register their details and capture their photo.
-3. If an employee submits a pending visit request, review it on the `VisitorDetailsScreen` and press **Approve**.
-4. Check out visitors manually at the end of the day if they forgot to scan out.
+The Enterprise Visitor Management System (VMS) utilizes strict Role-Based Access Control (RBAC). The application dynamically restricts UI capabilities and workflows based on the active user's role.
 
 ---
 
-## 2. Security Guard
+## 1. Personas & Roles
 
-**Role Summary:** The physical gatekeeper of the building. Needs rapid, frictionless tools to verify identities and execute check-ins/check-outs without navigating complex dashboards.
+### A. Security Guard (`ROLE_GUARD`)
+Stationed at entry points (main gate) and internal checkpoints (e.g., Executive Floor).
+- **Core Duties**: Scan QR passes, verify identities, register walk-in guests, enforce access control.
+- **Capabilities**:
+  - `ProcessCheckInUseCase`: Mark a visitor as entered.
+  - `ProcessCheckOutUseCase`: Mark a visitor as exited.
+  - `VerifyCheckpointUseCase`: Scan a pass for internal movement tracking.
+  - `RegisterWalkInVisitorUseCase`: Register unexpected guests (creates a `PENDING` visit).
 
-**Feature Access (Permissions):**
-- ✅ `SCAN_QR` (Access to the hardware camera integration)
-- ✅ `CHECK_IN` & `CHECK_OUT` (Execute physical entry/exit state mutations)
-- ✅ `REGISTER_WALK_IN` (Register delivery drivers or sudden arrivals)
-- ✅ `VIEW_ALL_VISITORS` (To verify watchlists or active building occupancy)
-- ✅ `MANUAL_VERIFY` (Can physically verify ID cards against the digital pass)
+### B. Host / Employee (`ROLE_HOST`)
+The internal employee responsible for the visitor.
+- **Core Duties**: Pre-register expected guests, approve/reject walk-in guests.
+- **Capabilities**:
+  - `RegisterWalkInVisitorUseCase` (Pre-Approval): Creates an `APPROVED` visit and instantly generates a QR pass.
+  - `ProcessApprovalUseCase`: Review and approve/reject pending walk-in requests.
 
-**Standard Workflow:**
-1. Remain on the **Scan** tab holding the device.
-2. When a visitor presents their digital QR pass, scan it.
-3. The app instantly routes to the `VisitorDetailsScreen` and loads the Visit data.
-4. Verify the visitor's face against the digital photo.
-5. Press **Check In**. The system automatically logs the audit timestamp and updates the building occupancy.
-6. When the visitor leaves, scan the pass again and press **Check Out**.
-
----
-
-## 3. Host / Standard Employee
-
-**Role Summary:** Employees of the company who are expecting guests. 
-
-**Feature Access (Permissions):**
-- ✅ `VIEW_OWN_VISITORS` (Can ONLY see visits where they are listed as the `hostId`)
-- ✅ `CREATE_PRE_APPROVED` (Only for Hosts: Can send an invite to an expected guest)
-- ❌ Cannot approve walk-ins.
-- ❌ Cannot scan QR codes.
-- ❌ Cannot check visitors into the physical building.
-
-**Standard Workflow (Host):**
-1. Log in to see a dashboard filtered solely to their own upcoming meetings.
-2. Tap the **+** button to pre-register an expected guest (e.g., an interview candidate).
-3. The system generates a digital pass and (simulated) emails it to the guest.
-4. Receive a push notification when the Security Guard checks their guest into the lobby.
+### C. Receptionist / Admin (`ROLE_RECEPTIONIST`)
+Front-desk administration and compliance monitoring.
+- **Core Duties**: Oversee all visitor traffic, generate audit reports, handle edge cases.
+- **Capabilities**:
+  - All Guard capabilities.
+  - `GetDashboardStatsUseCase`: View live metrics (Expected, Active, Completed).
+  - `GenerateVisitorReportUseCase` / `ExportAuditLogsUseCase`: Export compliance CSVs.
+  - Manual override of approvals and check-ins.
 
 ---
 
-## 4. Company Admin
+## 2. Standard Workflows
 
-**Role Summary:** The IT or Operations manager for a specific tenant/company using the VMS.
+### Workflow 1: Pre-Registration (Fast Track)
+1. **Host** logs into the VMS and fills out the visitor details.
+2. The `RegisterWalkInVisitorUseCase` detects the `Host` role and automatically sets the visit to `APPROVED`.
+3. A `VisitorPass` is instantly generated with a secure QR token and a specific validity window.
+4. The system emails/texts the QR pass to the guest.
+5. The guest arrives, shows the QR code.
+6. **Guard** scans the code. The system locks the transaction and sets the visit to `CHECKED_IN`.
 
-**Feature Access (Permissions):**
-- ✅ `VIEW_ALL_VISITORS`
-- ✅ `MANAGE_USERS` (Can invite new Receptionists or Security Guards to the platform)
-- ✅ All Receptionist features (`CREATE_PRE_APPROVED`, `CHECK_IN`, `CHECK_OUT`)
+### Workflow 2: Walk-In Registration (Requires Approval)
+1. Guest arrives unannounced.
+2. **Guard** or **Receptionist** registers the visitor on a tablet.
+3. The `RegisterWalkInVisitorUseCase` detects the non-host role and sets the visit to `PENDING`. No pass is generated.
+4. A notification is sent to the target **Host**.
+5. The **Host** reviews the request on their Dashboard and taps "Approve".
+6. The `ProcessApprovalUseCase` executes, moving the status to `APPROVED` and dynamically generating the QR pass.
+7. The Guard can now scan the newly generated pass or manually check them in.
 
-**Standard Workflow:**
-1. Monitor the overall dashboard to ensure building capacity isn't exceeded.
-2. Navigate to the Users/Employees list to provision accounts for new hires.
-3. Audit the timeline logs on the `VisitorDetailsScreen` to investigate security incidents.
+### Workflow 3: Multi-Gate Checkpoints
+1. An already `CHECKED_IN` visitor attempts to enter a restricted area (e.g., Data Center).
+2. The internal **Guard** scans their QR pass using `VerifyCheckpointUseCase`.
+3. The system validates that the pass is active and logs the location access in `checkpoint_logs`.
+4. The overall Visit status remains `CHECKED_IN`.
 
----
-
-## 5. Super Admin
-
-**Role Summary:** The system provider or global IT administrator.
-
-**Feature Access (Permissions):**
-- ✅ `ALL` (Bypasses all permission guards. Has unrestricted access to every tenant and every feature).
-
-**Standard Workflow:**
-- Rarely logs into the mobile application.
-- Used primarily to provision new `Company Admin` accounts when a new organization purchases the VMS software.
-- Can access global debug tools and system-wide audit logs.
-
----
-
-## Technical Implementation Notes
-
-The UI dynamically adapts to these roles. For instance, the **Approve** button on a `PENDING` visit is wrapped in a permission guard:
-
-```tsx
-<PermissionGuard permission={Permissions.CREATE_PRE_APPROVED}>
-  <SecondaryButton title="Approve" onPress={() => handleUpdateStatus(VisitStatus.APPROVED)} />
-</PermissionGuard>
-```
-If a `Security Guard` views a pending visit, they will not see the Approve button, but they will see the `Check In` button once it is approved. If a `Standard Employee` logs in, the `DashboardRepository` ensures their stats only reflect visits tied to their specific `hostId`.
+### Workflow 4: Check-Out & Expiration
+1. The visitor leaves the building and the **Guard** scans their pass.
+2. The `ProcessCheckOutUseCase` executes.
+3. The Visit status is updated to `COMPLETED`.
+4. The VisitorPass status is permanently updated to `EXPIRED`. 
+5. Any future attempts to scan this QR code will instantly return an `INVALID` warning to the scanner.
