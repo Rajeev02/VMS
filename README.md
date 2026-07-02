@@ -10,6 +10,15 @@ A production-grade, end-to-end Enterprise Visitor Management System built with R
 
 The Enterprise VMS is designed to replace legacy paper-based logbooks with a secure, digital, and automated workflow. It addresses the security and compliance needs of large corporate campuses by ensuring every entry, internal movement, and exit is cryptographically tied to a dynamic QR pass and immutably recorded.
 
+## Demo
+
+<img src="docs/publicassets/guard-dashboard-active-tab.jpeg" width="260" alt="VMS guard dashboard active visits demo">
+
+View the full demo gallery with screenshots and videos here:
+
+*   [Demo Assets: Screenshots and Videos](docs/publicassets/README.md)
+*   [Watch QR Check-In Workflow](docs/publicassets/demo-02-qr-checkin-workflow.mp4)
+
 ---
 
 ## Core Features & Workflows
