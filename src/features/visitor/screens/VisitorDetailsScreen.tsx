@@ -185,7 +185,9 @@ export const VisitorDetailsScreen = () => {
             </PermissionGuard>
           )}
 
-          <SecondaryButton title="View Digital Pass" onPress={() => navigation.navigate('DigitalPass', { visitId: visit.id })} />
+          {visit.status !== VisitStatus.PENDING && visit.status !== VisitStatus.REJECTED && (
+            <SecondaryButton title="View Digital Pass" onPress={() => navigation.navigate('DigitalPass', { visitId: visit.id })} />
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
