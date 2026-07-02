@@ -61,7 +61,7 @@ For manual testing, you can use the following mock credentials. These route you 
 
 ## Architecture
 
-The project adheres to Robert C. Martin's Clean Architecture principles.
+The project adheres strictly to **Clean Architecture** principles.
 
 ### Dependency Injection (Service Locator)
 We use a static `ServiceLocator` to inject external dependencies (`IAuditLogService`, `IStorageService`) into our Use Cases. This ensures the Domain is 100% pure and highly testable. 
