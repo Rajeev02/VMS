@@ -39,9 +39,8 @@ We support both Host Pre-Approval and Walk-In flows cleanly via the `RegisterWal
 Because external visitors do not download the VMS application, the system generates a secure, web-based digital pass.
 *   Once a visit is `APPROVED`, the system creates a unique cryptographic token and generates a public URL.
 *   This URL is emailed/SMS'd to the visitor. They simply tap the link to view their dynamic QR code on their mobile browser.
-*   **Live Examples:** Check out how the pass renders in a browser (works on desktop and mobile):
-    *   [Example Pass 1](https://rajeev02.github.io/vms/pass.html?token=demotoken12345)
-    *   [Example Pass 2](https://rajeev02.github.io/vms/pass.html?token=demotoken67890)
+*   **Live Example:** Check out how the pass renders in a browser (works on desktop and mobile):
+    *   [Example Web Pass](https://rajeev02.github.io/vms/pass.html?token=valid-123)
 
 ### 4. Check-In & Multi-Gate Verification
 *   **Atomic Check-In:** Security scans the pass. `ValidateQrScanUseCase` ensures the pass is not `EXPIRED` or `REVOKED`. If valid, Firebase `runTransaction` securely locks the DB, setting Visit to `CHECKED_IN`.
