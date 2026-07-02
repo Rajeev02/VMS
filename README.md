@@ -23,6 +23,12 @@ The system dynamically limits UI capabilities based on who logs in.
 | **Host (Employee)** | Internal Employee | Pre-approve expected guests (which generates a pass instantly), Approve/Reject walk-in guests. |
 | **Receptionist** | Admin / Monitor | View live traffic dashboard, Export Audit Logs (CSV), Override approvals. |
 
+### Extended Documentation
+For a deeper dive into the system's inner workings, please refer to our dedicated documentation inside the `docs/` folder:
+*   [📖 Roles & Workflows](docs/ROLES_AND_WORKFLOWS.md): Detailed breakdown of every user persona and step-by-step visitor lifecycles.
+*   [🏗️ Architecture](docs/ARCHITECTURE.md): Explanation of the Clean Architecture implementation and Service Locator pattern.
+*   [⚙️ Technical Design](docs/TECHNICAL_DESIGN.md): Firebase data schemas, Redux state management, and transaction safety mechanics.
+
 ### 2. Visitor Registration Flows
 We support both Host Pre-Approval and Walk-In flows cleanly via the `RegisterWalkInVisitorUseCase`.
 
