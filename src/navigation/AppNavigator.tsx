@@ -18,6 +18,9 @@ import { CaptureIDScreen } from '../features/visitor/screens/CaptureIDScreen';
 import { CheckInScreen } from '../features/visitor/screens/CheckInScreen';
 import { VerifyWithoutPassScreen } from '../features/visitor/screens/VerifyWithoutPassScreen';
 
+import { HostDashboardScreen } from '../features/visitor/screens/HostDashboardScreen';
+import { ApprovalDetailScreen } from '../features/visitor/screens/ApprovalDetailScreen';
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -77,6 +80,16 @@ const TabNavigator = () => {
         />
       )}
       <Tab.Screen 
+        name="Approvals" 
+        component={HostDashboardScreen} 
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="fact-check" color={color} size={size} />
+          ),
+          headerTitle: 'Pending Approvals'
+        }}
+      />
+      <Tab.Screen 
         name="Settings" 
         component={SettingsScreen} 
         options={{
@@ -97,6 +110,7 @@ export const AppNavigator = () => {
       <Stack.Screen name="CaptureID" component={CaptureIDScreen} options={{ headerShown: false, title: 'Capture Government ID' }} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ headerShown: false, title: 'Check-In' }} />
       <Stack.Screen name="VerifyWithoutPass" component={VerifyWithoutPassScreen} options={{ headerShown: false, title: 'Verify Identity' }} />
+      <Stack.Screen name="ApprovalDetail" component={ApprovalDetailScreen} options={{ headerShown: false, title: 'Approval Details' }} />
     </Stack.Navigator>
   );
 };

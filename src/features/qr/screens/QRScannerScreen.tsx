@@ -8,8 +8,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { AppTheme } from '../../../theme/theme';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import Logger from '../../../core/logger/Logger';
-import firestore from '@react-native-firebase/firestore';
 import { VisitStatus } from '../../../domain/models/enums';
+import { ValidateQrScanUseCase } from '../usecases/ValidateQrScanUseCase';
+import { VerifyCheckpointUseCase } from '../usecases/VerifyCheckpointUseCase';
+import { ProcessCheckOutUseCase } from '../../visitor/usecases/ProcessCheckOutUseCase';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const QRScannerScreen = () => {
@@ -22,6 +24,7 @@ export const QRScannerScreen = () => {
   const [permissionStatus, setPermissionStatus] = useState<string>('not-determined');
   const [processing, setProcessing] = useState(false);
   const [flashOn, setFlashOn] = useState(false);
+  const [scanMode, setScanMode] = useState<'CHECK_IN' | 'CHECKPOINT' | 'CHECK_OUT'>('CHECK_IN');
 
   const checkAndRequestPermission = async () => {
     const currentStatus = Camera.getCameraPermissionStatus();
@@ -55,48 +58,51 @@ export const QRScannerScreen = () => {
       Logger.info(`QR Scanned: ${qrValue}`);
       
       try {
-        const passesSnapshot = await firestore().collection('visitor_passes').where('qrToken', '==', qrValue).limit(1).get();
-        if (passesSnapshot.empty) {
-            throw new Error('Pass not found or invalid.');
+        if (scanMode === 'CHECK_IN') {
+          const useCase = new ValidateQrScanUseCase();
+          const result = await useCase.execute(qrValue);
+
+          if (!result.isValid) {
+            throw new Error(result.error || 'Invalid QR code.');
+          }
+
+          Alert.alert('Scan Successful', 'Navigating to check-in...');
+          navigation.navigate('CheckIn', { visitId: result.pass?.visitId, qrToken: qrValue });
+        } else if (scanMode === 'CHECKPOINT') {
+          // Checkpoint mode
+          const validateCase = new ValidateQrScanUseCase();
+          const useCase = new VerifyCheckpointUseCase(validateCase);
+          const result = await useCase.execute({
+            qrToken: qrValue,
+            checkpointName: 'Internal Security Gate',
+            scannedBy: 'Guard123'
+          });
+
+          if (!result.isValid) {
+            throw new Error(result.error || 'Invalid QR code.');
+          }
+
+          Alert.alert('Verification Successful', `${result.visitor?.name} is authorized. Checkpoint logged.`);
+        } else if (scanMode === 'CHECK_OUT') {
+          // Check-Out mode
+          const validateCase = new ValidateQrScanUseCase();
+          const result = await validateCase.execute(qrValue);
+
+          // For check-out, we only care that the pass is currently valid (or at least belongs to a visit).
+          // If the pass is expired, they might already be checked out.
+          if (!result.visit) {
+            throw new Error('Associated visit not found for this QR code.');
+          }
+
+          if (result.visit.status !== VisitStatus.CHECKED_IN) {
+            throw new Error(`Cannot check out. Visitor is currently in status: ${result.visit.status}`);
+          }
+
+          const useCase = new ProcessCheckOutUseCase();
+          await useCase.execute(result.visit.id);
+          
+          Alert.alert('Check-Out Successful', `${result.visitor?.name || 'Visitor'} has been securely checked out.`);
         }
-
-        const passDoc = passesSnapshot.docs[0];
-        const passData = passDoc.data();
-        
-        if (passData.status === 'EXPIRED' || passData.status === 'REVOKED') {
-            throw new Error(`Pass is ${passData.status.toLowerCase()}.`);
-        }
-
-        const visitRef = firestore().collection('visits').doc(passData.visitId);
-
-        await firestore().runTransaction(async (transaction) => {
-            const visitSnap = await transaction.get(visitRef);
-            if (!visitSnap.exists) {
-                throw new Error('Visit record not found.');
-            }
-
-            const visitData = visitSnap.data();
-            if (visitData?.status === VisitStatus.CHECKED_IN) {
-                throw new Error('Visitor is already checked in.');
-            }
-
-            // Execute check-in
-            transaction.update(visitRef, {
-                status: VisitStatus.CHECKED_IN,
-                entryTime: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-            });
-
-            // Update Pass status
-            transaction.update(passDoc.ref, {
-                status: 'CHECKED_IN',
-                updatedAt: new Date().toISOString()
-            });
-        });
-        
-        Alert.alert('Check-In Successful', 'The visitor has been checked in securely.');
-        navigation.navigate('VisitorDetails', { visitId: passData.visitId });
-
       } catch (e: any) {
         Logger.error('QR Validation failed', e);
         Alert.alert('Scan Failed', e.message || 'The pass is invalid or expired.');
@@ -188,9 +194,34 @@ export const QRScannerScreen = () => {
           </TouchableOpacity>
           <View style={styles.headerTextContainer}>
             <Text style={styles.title}>Scan Visitor Pass</Text>
-            <Text style={styles.subtitle}>Align QR code within the frame</Text>
+            <Text style={styles.subtitle}>
+              {scanMode === 'CHECK_IN' ? 'Align QR code for Main Gate Entry' : 
+               scanMode === 'CHECK_OUT' ? 'Align QR code to Check-Out' : 
+               'Verify Pass at Checkpoint'}
+            </Text>
           </View>
           <View style={{ width: 24 }} />
+        </View>
+
+        <View style={styles.modeToggleContainer}>
+          <TouchableOpacity 
+            style={[styles.modeToggleBtn, scanMode === 'CHECK_IN' && styles.modeToggleActive]}
+            onPress={() => setScanMode('CHECK_IN')}
+          >
+            <Text style={[styles.modeToggleText, scanMode === 'CHECK_IN' && styles.modeToggleActiveText]}>Check-In</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.modeToggleBtn, scanMode === 'CHECKPOINT' && styles.modeToggleActive]}
+            onPress={() => setScanMode('CHECKPOINT')}
+          >
+            <Text style={[styles.modeToggleText, scanMode === 'CHECKPOINT' && styles.modeToggleActiveText]}>Checkpoint</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.modeToggleBtn, scanMode === 'CHECK_OUT' && styles.modeToggleActive]}
+            onPress={() => setScanMode('CHECK_OUT')}
+          >
+            <Text style={[styles.modeToggleText, scanMode === 'CHECK_OUT' && styles.modeToggleActiveText]}>Check-Out</Text>
+          </TouchableOpacity>
         </View>
 
         <View style={styles.scannerFrameContainer}>
@@ -260,6 +291,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     opacity: 0.8,
     marginTop: 4,
+  },
+  modeToggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: 20,
+    marginHorizontal: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    padding: 4,
+  },
+  modeToggleBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 16,
+  },
+  modeToggleActive: {
+    backgroundColor: '#10B981',
+  },
+  modeToggleText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+  },
+  modeToggleActiveText: {
+    color: '#FFF',
   },
   scannerFrameContainer: {
     flex: 1,

@@ -10,10 +10,11 @@ import { hasPermission, Permissions } from '../../../core/auth/permissions';
 import { useNavigation } from '@react-navigation/native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { VisitorRepository } from '../../visitor/VisitorRepository';
-import { DashboardRepository, DashboardStats } from '../DashboardRepository';
-import { Visitor } from '../../../domain/models/Visitor';
+import { GetDashboardStatsUseCase, DashboardStats } from '../usecases/GetDashboardStatsUseCase';
+import { GetVisitsByStatusUseCase, PopulatedVisit } from '../usecases/GetVisitsByStatusUseCase';
+import { VisitStatus } from '../../../domain/models/enums';
+import { ProcessCheckOutUseCase } from '../../visitor/usecases/ProcessCheckOutUseCase';
+import { Alert } from 'react-native';
 
 export const DashboardScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -23,26 +24,49 @@ export const DashboardScreen = () => {
   const insets = useSafeAreaInsets();
   
   const [stats, setStats] = React.useState<DashboardStats>({
-    totalVisitors: 0, todaysVisitors: 0, upcomingVisits: 0,
-    pending: 0, approved: 0, rejected: 0, checkedIn: 0, checkedOut: 0
+    expected: 0, active: 0, completed: 0
   });
-  const [recentActivity, setRecentActivity] = React.useState<any[]>([]);
+  
+  const [activeTab, setActiveTab] = React.useState<'EXPECTED' | 'ACTIVE' | 'COMPLETED'>('ACTIVE');
+  const [visits, setVisits] = React.useState<PopulatedVisit[]>([]);
+  const [refreshing, setRefreshing] = React.useState(false);
+
+  const loadDashboardData = async () => {
+    try {
+      setRefreshing(true);
+      const statsUseCase = new GetDashboardStatsUseCase();
+      const currentStats = await statsUseCase.execute();
+      setStats(currentStats);
+
+      const visitsUseCase = new GetVisitsByStatusUseCase();
+      let statusesToFetch: VisitStatus[] = [];
+      if (activeTab === 'EXPECTED') statusesToFetch = [VisitStatus.PENDING, VisitStatus.APPROVED];
+      if (activeTab === 'ACTIVE') statusesToFetch = [VisitStatus.CHECKED_IN];
+      if (activeTab === 'COMPLETED') statusesToFetch = [VisitStatus.COMPLETED, VisitStatus.CHECKED_OUT];
+      
+      const currentVisits = await visitsUseCase.execute(statusesToFetch);
+      setVisits(currentVisits);
+    } catch (error) {
+      console.error('Failed to load dashboard data', error);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   React.useEffect(() => {
-    const loadDashboardData = async () => {
-      try {
-        const visitors = await VisitorRepository.getVisitors();
-        setRecentActivity(visitors.slice(0, 5));
-        
-        const dashboardStats = await DashboardRepository.getStats();
-        setStats(dashboardStats);
-      } catch (error) {
-        console.error('Failed to load dashboard data', error);
-      }
-    };
-    
     loadDashboardData();
-  }, [theme]);
+  }, [theme, activeTab]);
+
+  const handleManualCheckOut = async (visitId: string) => {
+    try {
+      const useCase = new ProcessCheckOutUseCase();
+      await useCase.execute(visitId);
+      Alert.alert('Success', 'Visitor checked out manually.');
+      loadDashboardData();
+    } catch (e: any) {
+      Alert.alert('Error', e.message);
+    }
+  };
 
   const canScanQR = user ? hasPermission(user.permissions, Permissions.SCAN_QR) : false;
   const canRegisterWalkIn = user ? hasPermission(user.permissions, Permissions.REGISTER_WALK_IN) : false;
@@ -73,36 +97,18 @@ export const DashboardScreen = () => {
 
       <View style={styles.statsContainer}>
         <View style={styles.statsRow}>
-          <TouchableOpacity 
-            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
-            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'All' }})}
-          >
-            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Total</Text>
-            <Text style={[styles.statCount, { color: theme.custom.colors.textPrimary }]}>{stats.totalVisitors}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
-            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Pending' }})}
-          >
-            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Pending</Text>
-            <Text style={[styles.statCount, { color: theme.custom.colors.warning }]}>{stats.pending}</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.statsRow}>
-          <TouchableOpacity 
-            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
-            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Approved' }})}
-          >
-            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Approved</Text>
-            <Text style={[styles.statCount, { color: theme.colors.primary }]}>{stats.approved}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
-            onPress={() => navigation.navigate('Visitors', { screen: 'VisitorsList', params: { filter: 'Checked In' }})}
-          >
-            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Checked In</Text>
-            <Text style={[styles.statCount, { color: theme.colors.primary }]}>{stats.checkedIn}</Text>
-          </TouchableOpacity>
+          <View style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Expected</Text>
+            <Text style={[styles.statCount, { color: theme.custom.colors.warning }]}>{stats.expected}</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Active Now</Text>
+            <Text style={[styles.statCount, { color: '#10B981' }]}>{stats.active}</Text>
+          </View>
+          <View style={[styles.statCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
+            <Text style={[styles.statTitle, { color: theme.custom.colors.textSecondary }]}>Completed</Text>
+            <Text style={[styles.statCount, { color: theme.custom.colors.textPrimary }]}>{stats.completed}</Text>
+          </View>
         </View>
       </View>
 
@@ -115,7 +121,7 @@ export const DashboardScreen = () => {
               style={[styles.actionCard, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}
               onPress={action.action}
             >
-              <Icon name={action.icon} size={28} color={action.color} />
+              <Icon name={action.icon as any} size={28} color={action.color} />
               <Text style={[styles.actionTitle, { color: theme.custom.colors.textPrimary }]}>{action.title}</Text>
             </TouchableOpacity>
           ))}
@@ -123,19 +129,41 @@ export const DashboardScreen = () => {
       </View>
 
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Recent Activity</Text>
-        {recentActivity.map(activity => (
-          <View key={activity.id} style={[styles.activityRow, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
+        <View style={styles.tabContainer}>
+          <TouchableOpacity onPress={() => setActiveTab('EXPECTED')} style={[styles.tab, activeTab === 'EXPECTED' && { borderBottomColor: theme.colors.primary }]}>
+            <Text style={{ color: activeTab === 'EXPECTED' ? theme.colors.primary : theme.custom.colors.textSecondary, fontWeight: activeTab === 'EXPECTED' ? 'bold' : 'normal' }}>Expected</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('ACTIVE')} style={[styles.tab, activeTab === 'ACTIVE' && { borderBottomColor: theme.colors.primary }]}>
+            <Text style={{ color: activeTab === 'ACTIVE' ? theme.colors.primary : theme.custom.colors.textSecondary, fontWeight: activeTab === 'ACTIVE' ? 'bold' : 'normal' }}>Active</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setActiveTab('COMPLETED')} style={[styles.tab, activeTab === 'COMPLETED' && { borderBottomColor: theme.colors.primary }]}>
+            <Text style={{ color: activeTab === 'COMPLETED' ? theme.colors.primary : theme.custom.colors.textSecondary, fontWeight: activeTab === 'COMPLETED' ? 'bold' : 'normal' }}>Completed</Text>
+          </TouchableOpacity>
+        </View>
+
+        {refreshing ? <Text style={{textAlign: 'center', marginTop: 20}}>Loading...</Text> : visits.length === 0 ? <Text style={{textAlign: 'center', marginTop: 20}}>No visits in this category.</Text> : visits.map(visit => (
+          <View key={visit.id} style={[styles.activityRow, { backgroundColor: theme.custom.colors.surface, borderColor: theme.custom.colors.border }]}>
             <View style={styles.activityInfo}>
               <View style={[styles.activityAvatar, { backgroundColor: theme.colors.primary + '20' }]}>
-                <Icon name="person" size={20} color={theme.colors.primary} />
+                <Icon name="person" as any size={20} color={theme.colors.primary} />
               </View>
               <View>
-                <Text style={[styles.activityName, { color: theme.custom.colors.textPrimary }]}>{activity.name}</Text>
-                <Text style={[styles.activityStatus, { color: theme.custom.colors.textSecondary }]}>{activity.status}</Text>
+                <Text style={[styles.activityName, { color: theme.custom.colors.textPrimary }]}>{visit.visitorName}</Text>
+                <Text style={[styles.activityStatus, { color: theme.custom.colors.textSecondary }]}>{visit.purpose} • {visit.status}</Text>
               </View>
             </View>
-            <Text style={[styles.activityTime, { color: theme.custom.colors.textSecondary }]}>{activity.time}</Text>
+            
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[styles.activityTime, { color: theme.custom.colors.textSecondary, marginBottom: 8 }]}>
+                {new Date(visit.scheduledDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+              
+              {activeTab === 'ACTIVE' && (
+                <TouchableOpacity onPress={() => handleManualCheckOut(visit.id)} style={{ backgroundColor: '#EF4444', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ color: '#FFF', fontSize: 12, fontWeight: 'bold' }}>Check Out</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         ))}
       </View>
@@ -268,5 +296,18 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     fontSize: 12,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
   },
 });

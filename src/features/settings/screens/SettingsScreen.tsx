@@ -6,7 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { AppTheme } from '../../../theme/theme';
 import { RootState } from '../../../app/store';
 import { logout } from '../../auth/authSlice';
-import { toggleTheme } from './themeSlice';
+// import { toggleTheme } from './themeSlice';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 
 export const SettingsScreen = () => {

@@ -61,18 +61,39 @@ export const CaptureIDScreen = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
+      const { LocalStorageService } = require('../../../infrastructure/storage/LocalStorageService');
+      const { RegisterWalkInVisitorUseCase } = require('../usecases/RegisterWalkInVisitorUseCase');
+      const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
+      const { NotificationFacade } = require('../../notifications/NotificationFacade');
+      
+      const storageService = new LocalStorageService();
+      const facade = new NotificationFacade(
+        new MockEmailService(),
+        new MockSmsService(),
+        new MockWhatsAppService(),
+        new MockPushNotificationService()
+      );
+      const useCase = new RegisterWalkInVisitorUseCase(storageService, facade);
+
       const payload = {
-        ...visitorData,
-        idCardUrl,
+        visitorData: visitorData,
+        visitData: {
+          purpose: visitorData.purpose,
+          hostId: visitorData.hostId,
+          vehicleNumber: visitorData.vehicleNumber,
+          notes: visitorData.notes,
+          entryTime: visitorData.validFrom,
+          expectedExitTime: visitorData.validUntil,
+        },
+        photoLocalUri: visitorData.photoUrl,
+        idCardLocalUri: idCardUrl,
       };
       
-      const { visitor, visit, pass } = await VisitorRepository.registerWalkInVisitor(payload, {
-        purpose: payload.purpose,
-        hostId: payload.hostId
-      });
+      const { visitor, visit, pass } = await useCase.execute(payload);
       navigation.navigate('CheckIn', { id: visitor.id });
     } catch (error) {
-      Alert.alert('Error', 'Failed to register visitor');
+      console.log('Error registering visitor:', error);
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to register visitor');
     } finally {
       setIsSubmitting(false);
     }

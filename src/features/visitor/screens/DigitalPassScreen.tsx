@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, Share } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Alert, Share, Linking } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
@@ -56,13 +56,42 @@ export const DigitalPassScreen = () => {
 
   const handleShare = async (channel: string) => {
     try {
-      await Share.share({
-        message: `Here is your visitor pass for ${passDetails.building}. Link: ${passDetails.publicUrl}`,
-        url: passDetails.publicUrl,
-        title: 'Visitor Pass'
-      });
+      const message = `Here is your visitor pass for ${passDetails.building}. Link: ${passDetails.publicUrl}`;
+      const urlMessage = encodeURIComponent(message);
+      
+      switch (channel) {
+        case 'SMS':
+          await Linking.openURL(`sms:?body=${urlMessage}`);
+          break;
+        case 'EMAIL':
+          await Linking.openURL(`mailto:?subject=Visitor Pass&body=${urlMessage}`);
+          break;
+        case 'WHATSAPP':
+          await Linking.openURL(`whatsapp://send?text=${urlMessage}`);
+          break;
+        case 'ANY':
+        default:
+          await Share.share({
+            message: message,
+            url: passDetails.publicUrl,
+            title: 'Visitor Pass'
+          });
+          break;
+      }
     } catch (error) {
-      Alert.alert('Error', 'Unable to share the pass link.');
+      Alert.alert('Error', 'Unable to share the pass link using this channel.');
+    }
+  };
+
+  const handlePrintPdf = async () => {
+    try {
+      const { MockDocumentService } = require('../../../infrastructure/documents/MockDocumentService');
+      const docService = new MockDocumentService();
+      
+      const pdfUri = await docService.generatePdf(passDetails);
+      await docService.printDocument(pdfUri);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to generate or print the pass.');
     }
   };
 
@@ -155,6 +184,12 @@ export const DigitalPassScreen = () => {
               <ShareButton icon="share" label="Share..." onPress={() => handleShare('ANY')} />
             </View>
 
+            <PrimaryButton 
+              title="Generate PDF & Print" 
+              onPress={handlePrintPdf} 
+              style={{ marginBottom: 12 }}
+            />
+            
             <PrimaryButton 
               title="Add to Apple Wallet" 
               onPress={() => {}} 

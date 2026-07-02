@@ -46,7 +46,7 @@ export const CreateVisitorScreen = () => {
     if (!name || !company) return;
     setLoading(true);
     try {
-      const { visitor, visit, pass } = await VisitorRepository.registerWalkInVisitor({
+      const { visitor, visit, pass } = await VisitorRepository.saveWalkInRegistration({
         name,
         company,
         phone,

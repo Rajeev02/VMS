@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform, SafeAreaView, Alert } from 'react-native';
 import { Text, useTheme } from 'react-native-paper';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
@@ -8,6 +8,7 @@ import { CustomInput } from '../../../components/CustomInput';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { VisitorRepository } from '../VisitorRepository';
+import { ProcessCheckInUseCase } from '../usecases/ProcessCheckInUseCase';
 
 export const CheckInScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -16,6 +17,7 @@ export const CheckInScreen = () => {
   const [badgeNumber, setBadgeNumber] = useState('');
 
   const [visitor, setVisitor] = useState<any>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   React.useEffect(() => {
     const loadVisitor = async () => {
@@ -29,9 +31,45 @@ export const CheckInScreen = () => {
     loadVisitor();
   }, [route.params?.passId]);
 
-  const handleCheckIn = () => {
-    // Navigate back to Dashboard on success for demo
-    navigation.navigate('DashboardTab');
+  const handleCheckIn = async () => {
+    if (!route.params?.visitId) {
+      Alert.alert('Error', 'Missing Visit ID.');
+      return;
+    }
+    
+    setIsProcessing(true);
+    try {
+      const { NotificationFacade } = require('../../notifications/NotificationFacade');
+      const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
+      const { LocalStorageService } = require('../../../infrastructure/storage/LocalStorageService');
+      
+      const facade = new NotificationFacade(
+        new MockEmailService(),
+        new MockSmsService(),
+        new MockWhatsAppService(),
+        new MockPushNotificationService()
+      );
+      const storageService = new LocalStorageService();
+      
+      const useCase = new ProcessCheckInUseCase(facade, storageService);
+      
+      // We assume the qrToken was passed, if not we mock it for demo
+      const qrToken = route.params?.qrToken || 'mock-token';
+      
+      await useCase.execute({
+        visitId: route.params.visitId,
+        qrToken: qrToken
+      });
+      
+      Alert.alert('Check-In Successful', 'The visitor has been checked in and the host has been notified.', [
+        { text: 'OK', onPress: () => navigation.navigate('DashboardTab') }
+      ]);
+    } catch (e: any) {
+      console.log('Check-In Error:', e);
+      Alert.alert('Check-In Failed', e.message || 'An error occurred during check-in.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -96,6 +134,7 @@ export const CheckInScreen = () => {
           <PrimaryButton 
             title="Approve & Check In" 
             onPress={handleCheckIn} 
+            disabled={isProcessing}
           />
         </View>
       </KeyboardAvoidingView>

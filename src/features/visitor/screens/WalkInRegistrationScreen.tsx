@@ -29,6 +29,14 @@ export const WalkInRegistrationScreen = () => {
   const [govId, setGovId] = useState('');
   const [photoUrl, setPhotoUrl] = useState('');
 
+  // Additional Visit Data
+  const [hostId, setHostId] = useState('');
+  const [purpose, setPurpose] = useState('');
+  const [vehicleNumber, setVehicleNumber] = useState('');
+  const [validFrom, setValidFrom] = useState(new Date().toISOString());
+  const [validUntil, setValidUntil] = useState(new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString());
+  const [notes, setNotes] = useState('');
+
   const handleSearch = async () => {
     if (!searchQuery) return;
     setIsSearching(true);
@@ -96,6 +104,12 @@ export const WalkInRegistrationScreen = () => {
         company,
         governmentId: govId,
         photoUrl: photoUrl,
+        hostId,
+        purpose,
+        vehicleNumber,
+        validFrom,
+        validUntil,
+        notes,
       }
     });
   };
@@ -209,6 +223,30 @@ export const WalkInRegistrationScreen = () => {
                 onChangeText={setCompany}
                 placeholder="Enter company name"
               />
+              <CustomInput
+                label="Host Name/ID"
+                value={hostId}
+                onChangeText={setHostId}
+                placeholder="Enter host name or ID"
+              />
+              <CustomInput
+                label="Purpose of Visit"
+                value={purpose}
+                onChangeText={setPurpose}
+                placeholder="Enter purpose"
+              />
+              <CustomInput
+                label="Vehicle Number (Optional)"
+                value={vehicleNumber}
+                onChangeText={setVehicleNumber}
+                placeholder="Enter vehicle number"
+              />
+              <CustomInput
+                label="Notes (Optional)"
+                value={notes}
+                onChangeText={setNotes}
+                placeholder="Enter notes"
+              />
               
               <View style={styles.photoSection}>
                 <Text style={[styles.photoLabel, { color: theme.custom.colors.textPrimary }]}>Visitor Photo</Text>
@@ -236,7 +274,7 @@ export const WalkInRegistrationScreen = () => {
           <PrimaryButton 
             title="Continue" 
             onPress={handleNext} 
-            disabled={!fullName || !phone || !company || !govId}
+            disabled={!fullName || !phone || !company || !govId || !hostId || !purpose}
           />
         </View>
       )}

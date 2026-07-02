@@ -1,117 +1,120 @@
 # Enterprise Visitor Management System (VMS)
 
-An enterprise-grade Visitor Management System built with React Native and Firebase. It provides front-desk receptionists and security guards with a robust toolset for checking in visitors, issuing digital passes, scanning QR codes, and maintaining audit logs.
+[![React Native](https://img.shields.io/badge/React_Native-Expo-blue.svg)](https://expo.dev/)
+[![Architecture](https://img.shields.io/badge/Architecture-Clean-brightgreen.svg)]()
+[![Backend](https://img.shields.io/badge/Database-Firebase-orange.svg)](https://firebase.google.com/)
+
+A production-grade, end-to-end Enterprise Visitor Management System built with React Native (Expo) and Firebase. This application handles the entire visitor lifecycle from pre-registration and host approval to QR-based multi-gate checkpoint verification and strict compliance auditing.
 
 ## Overview
 
-The VMS application digitizes the physical front-desk experience. It allows hosts to pre-approve visits, receptionists to register walk-ins, and security officers to scan and validate digital passes in real time. It is built strictly on Clean Architecture principles, ensuring that UI components, business rules, and cloud infrastructure are decoupled and maintainable.
+The Enterprise VMS is designed to replace legacy paper-based logbooks with a secure, digital, and automated workflow. It addresses the security and compliance needs of large corporate campuses by ensuring every entry, internal movement, and exit is cryptographically tied to a dynamic QR pass and immutably recorded.
 
-## Features
+### Primary Use Cases
+*   **Security Teams:** Rapidly verify visitor identity at main gates and internal checkpoints using mobile QR scanning.
+*   **Receptionists:** Monitor real-time visitor traffic (Expected, Active, Completed) via a unified dashboard and generate compliance reports.
+*   **Employees (Hosts):** Securely pre-register guests or approve walk-in requests before passes are generated.
 
-- **Role-Based Access Control (RBAC):** Strict permission segregation across roles (Super Admin, Company Admin, Receptionist, Security Guard, Host, Standard Employee). Permissions dynamically determine UI visibility and access.
-- **Visitor Lifecycle Management:** End-to-end tracking of a visit from `PENDING` to `APPROVED`, `CHECKED_IN`, and `CHECKED_OUT`.
-- **QR Code Check-In:** Native camera integration using `expo-camera` to scan digital passes and automatically look up active visits.
-- **Real-Time Dashboard Analytics:** Aggregates real-time backend statistics for total visitors, upcoming visits, and active check-ins.
-- **Offline-First Resilience:** Integrates an `OfflineManager` and Firestore caching to ensure security operations persist during localized network outages.
-- **Dynamic Theming:** Deeply integrated Dark/Light mode powered by Redux and React Native Paper semantic tokens.
+---
+
+## Core Features
+
+*   **Clean Architecture Enforcement:** The codebase strictly separates Domain (entities, use cases), Infrastructure (Firebase, device APIs), and Presentation (React components, Redux), ensuring the business logic remains fully decoupled and highly testable via Dependency Injection (`ServiceLocator`).
+*   **Role-Based Access Control (RBAC):** UI features and system capabilities are dynamically restricted based on the authenticated user's role (Security Guard, Receptionist, Host).
+*   **Dynamic QR Generation & Validation:** Generates secure QR tokens tied to specific visits. Scanners enforce expiration windows, check-in statuses, and revocation, blocking unauthorized entry or pass reuse.
+*   **Multi-Gate Verification:** Supports optional internal checkpoints (e.g., Executive Floor, Server Room) that log location-specific access without altering the primary check-in/out state.
+*   **Atomic Transactions:** Firebase `runTransaction` guarantees that visit state changes (e.g., Check-In, Check-Out) are completely atomic, preventing concurrency issues like double check-ins.
+*   **Immutable System Audit Logging:** Every critical state transition (Pass Generated, Check-In, Checkpoint Verified, Check-Out) writes a detailed, timestamped event to the `system_audit_logs` collection for SOC2/GDPR compliance.
+*   **Data Export & Reporting:** Receptionists can generate and natively share CSV reports summarizing daily visitor traffic or full system audit logs.
+
+---
 
 ## Architecture
 
-This project strictly follows **Clean Architecture**:
+The project adheres to Robert C. Martin's Clean Architecture principles.
 
-`UI -> Presentation (Redux) -> Use Cases -> Repositories -> Data Source Interfaces -> Firebase Implementation`
+### Components
 
-Firebase is entirely isolated in the Infrastructure layer. The application never imports Firebase SDKs directly into UI or Domain logic, allowing for seamless swapping of the backend (e.g., to AWS, Spring Boot, or .NET) in the future.
+1.  **Domain (`src/domain/`)**
+    *   Contains the core business models (`Visit`, `Visitor`, `VisitorPass`) and pure repository/service interfaces (`IVisitDataSource`, `IAuditLogService`).
+2.  **Core (`src/core/`)**
+    *   Houses universal abstractions like `Logger`, RBAC utilities (`auth/permissions`), and the `ServiceLocator` for Dependency Injection.
+3.  **Infrastructure (`src/infrastructure/`)**
+    *   Implements the Domain interfaces. Contains concrete implementations like `FirebaseVisitDataSource` and `FirestoreAuditLogService`.
+4.  **Features (Use Cases & Presentation) (`src/features/`)**
+    *   Organized by module (e.g., `qr`, `visitor`, `dashboard`, `reports`).
+    *   Each module contains its specific Use Cases (e.g., `ProcessCheckInUseCase`) which orchestrate the domain logic, completely agnostic of the UI.
+    *   Contains the React Native UI screens (e.g., `QRScannerScreen.tsx`) which trigger the Use Cases.
 
-### Data Modeling
-
-We enforce strict entity separation:
-- **Visitor**: A permanent identity (Name, Company, Phone).
-- **Visit**: A transactional appointment (Time, Host, Purpose, Status).
-- **Visitor Pass**: The digital artifact representing an approved visit (QR Token).
+---
 
 ## Technology Stack
 
 | Category | Technology |
-|----------|------------|
+| :--- | :--- |
 | **Framework** | React Native (Expo) |
 | **Language** | TypeScript |
 | **State Management** | Redux Toolkit |
-| **UI Components** | React Native Paper |
-| **Routing** | React Navigation |
-| **Backend** | Firebase (Auth, Firestore) |
-| **Hardware** | Vision Camera (`expo-camera`) |
+| **Database** | Firebase Firestore |
+| **Styling** | React Native Paper / StyleSheet |
+| **Camera/Scanner** | `expo-camera` |
+| **Navigation** | React Navigation |
+
+---
 
 ## Project Structure
 
+```text
+src/
+├── app/                  # Redux store configuration
+├── core/                 # Shared utilities, Logger, RBAC, ServiceLocator DI
+├── domain/               # Enterprise business rules (Models, Enums, Interfaces)
+├── features/             # Feature modules (Use Cases, Screens, Components)
+│   ├── dashboard/        # Receptionist KPI Dashboard
+│   ├── notifications/    # Email/SMS Mock facades
+│   ├── qr/               # QR Scanning, Validation, and Checkpoint logic
+│   ├── reports/          # CSV Generation and Audit Exports
+│   └── visitor/          # Visitor Lifecycle (Approval, Check-In/Out)
+├── infrastructure/       # Concrete implementations (Firebase, Mock services)
+└── theme/                # Global styling and color tokens
 ```
-├── App.tsx                     # Application entry and global providers
-├── src/
-│   ├── app/                    # Redux store configuration
-│   ├── components/             # Reusable UI components
-│   ├── core/                   # Core utilities (auth, logger, offline, seeders)
-│   ├── domain/                 # Business logic, models, and interfaces
-│   ├── features/               # Feature-sliced modules (dashboard, visitor, qr)
-│   ├── infrastructure/         # External services implementations (Firebase)
-│   ├── navigation/             # Routing and Navigation Guards
-│   └── theme/                  # Global design tokens and themes
-```
+
+---
 
 ## Prerequisites
 
-- Node.js (v18+)
-- Expo CLI
-- Firebase Project with Firestore and Auth enabled
-- iOS Simulator or Android Emulator (or a physical device with Expo Go)
+*   Node.js (v18+)
+*   Expo CLI (`npm install -g expo-cli`)
+*   Firebase Account and configured Project
 
-## Installation
+---
 
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Rajeev02/VMS.git
-   cd VMS
-   ```
+## Installation & Setup
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/your-org/enterprise-vms.git
+    cd enterprise-vms
+    ```
 
-3. **Configure Environment:**
-   Ensure you have a valid Firebase configuration in `src/infrastructure/firebase/init.ts` or via `.env`.
+2.  **Install dependencies:**
+    ```bash
+    npm install
+    ```
 
-4. **Seed the Database:**
-   To populate Firebase with necessary roles, default permissions, and test accounts:
-   ```bash
-   npm run seed
-   ```
+3.  **Firebase Configuration:**
+    *   Ensure `@react-native-firebase/app` and `@react-native-firebase/firestore` are properly linked.
+    *   Place your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) in the root directory.
 
-5. **Start the application:**
-   ```bash
-   npx expo start
-   ```
+4.  **Run the application locally (Expo Go):**
+    ```bash
+    npx expo start
+    ```
 
-## Quick Start & Demo Credentials
+---
 
-To test the different user workflows and RBAC boundaries, the database seeder provisions the following accounts (password for all accounts is `password`):
+## Security
 
-| Role | Email |
-|------|-------|
-| Super Admin | `superadmin@vms.com` |
-| Company Admin | `companyadmin@vms.com` |
-| Receptionist | `receptionist@vms.com` |
-| Security Guard | `security@vms.com` |
-| Host | `host@vms.com` |
-| Standard Employee | `employee@vms.com` |
-
-Log in using `receptionist@vms.com` to test walk-in registrations and approvals. Log in using `security@vms.com` to test QR scanning and physical check-in flows.
-
-## Usage
-
-- **Navigating the Dashboard:** The Home tab displays a real-time summary of visits. Tapping a statistic (e.g., "Pending") immediately filters the Visitors list to show only pending visits.
-- **Scanning a Pass:** Use the Scan tab to open the camera. Point it at a generated Visitor Pass QR code. The app will resolve the token to an active Visit and navigate you to the Check-In screen.
-- **Changing Themes:** Navigate to the Settings tab to toggle Dark Mode, which instantaneously updates the semantic colors across the application via Redux.
-
-## License
-
-MIT License
+*   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions.
+*   **QR Security:** QR codes contain secure tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps.
+*   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.
