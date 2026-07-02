@@ -14,8 +14,8 @@ export const LoginScreen = () => {
   const theme = useTheme<AppTheme>();
   const dispatch = useDispatch();
   
-  const [email, setEmail] = useState('john.doe@company.com');
-  const [password, setPassword] = useState('password');
+  const [email, setEmail] = useState('guard@company.com');
+  const [password, setPassword] = useState('password123');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -58,7 +58,7 @@ export const LoginScreen = () => {
             autoCapitalize="none"
             keyboardType="email-address"
             editable={!loading}
-            placeholder="john.doe@company.com"
+            placeholder="guard@company.com"
           />
           
           <CustomInput
