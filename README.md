@@ -180,7 +180,35 @@ Because this project uses native Firebase SDKs (`@react-native-firebase`), you m
 5. Download the `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS).
 6. Place both of these files in the absolute root directory of this repository (`/enterprise-vms/`).
 
-### 3. Running the Application
+### 3. Fresh Clone Secret Setup
+Firebase config files and API keys are intentionally not committed to this repository.
+
+After cloning, add these local-only files in the project root:
+```text
+google-services.json
+GoogleService-Info.plist
+```
+
+These files are ignored by git through `.gitignore`, along with service-account keys:
+```text
+google-services.json
+GoogleService-Info.plist
+config/serviceAccountKey.json
+keys/
+```
+
+For local utility scripts, pass the Firebase Web API key through an environment variable instead of editing the script:
+```bash
+FIREBASE_WEB_API_KEY=your_firebase_web_api_key node seedCredentials.js
+FIREBASE_WEB_API_KEY=your_firebase_web_api_key node verifyUsers.js
+```
+
+If you use a different Firebase project ID, provide it as well:
+```bash
+FIREBASE_PROJECT_ID=your_project_id FIREBASE_WEB_API_KEY=your_firebase_web_api_key node seedCredentials.js
+```
+
+### 4. Running the Application
 Since this project uses native libraries like Vision Camera, you must prebuild the app or use Expo Go if plugins allow. For the best development experience:
 ```bash
 # Start the bundler and clear cache
@@ -213,6 +241,7 @@ If you run into issues while evaluating or running the project, check these comm
 *   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps and rejected for invalid states such as `EXPIRED`, `REVOKED`, and `SCANNED`.
 *   **Public Pass Images:** Public browser passes only render HTTP/HTTPS image URLs. Invalid local device paths fall back to a placeholder image.
 *   **Firebase Config Hygiene:** Real `google-services.json`, `GoogleService-Info.plist`, service-account keys, and API keys must stay local and must not be committed. Use environment variables such as `FIREBASE_WEB_API_KEY` for local scripts.
+*   **GitGuardian Remediation:** A Google API key was previously committed in Firebase config/script files. The current repository removes those tracked config files, moves script API keys to environment variables, and ignores local Firebase config files. Because the key existed in git history, it should still be rotated or restricted in Google Cloud/Firebase Console.
 *   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.
 
 ---
