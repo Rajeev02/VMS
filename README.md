@@ -10,22 +10,46 @@ A production-grade, end-to-end Enterprise Visitor Management System built with R
 
 The Enterprise VMS is designed to replace legacy paper-based logbooks with a secure, digital, and automated workflow. It addresses the security and compliance needs of large corporate campuses by ensuring every entry, internal movement, and exit is cryptographically tied to a dynamic QR pass and immutably recorded.
 
-### Primary Use Cases
-*   **Security Teams:** Rapidly verify visitor identity at main gates and internal checkpoints using mobile QR scanning.
-*   **Receptionists:** Monitor real-time visitor traffic (Expected, Active, Completed) via a unified dashboard and generate compliance reports.
-*   **Employees (Hosts):** Securely pre-register guests or approve walk-in requests before passes are generated.
+---
+
+## Core Features & Workflows
+
+### 1. Role-Based Access Control (RBAC) & Personas
+The system dynamically limits UI capabilities based on who logs in.
+
+| Persona | Role | Primary Capabilities |
+| :--- | :--- | :--- |
+| **Security Guard** | Point of Entry | Scan QR passes, Log Multi-Gate Checkpoints, Create Walk-in Visitors (which require Host approval). |
+| **Host (Employee)** | Internal Employee | Pre-approve expected guests (which generates a pass instantly), Approve/Reject walk-in guests. |
+| **Receptionist** | Admin / Monitor | View live traffic dashboard, Export Audit Logs (CSV), Override approvals. |
+
+### 2. Visitor Registration Flows
+We support both Host Pre-Approval and Walk-In flows cleanly via the `RegisterWalkInVisitorUseCase`.
+
+*   **Host Pre-Approval Flow:** An employee (Host) registers a guest in advance. The system sets the visit to `APPROVED` and dynamically generates a secure `VisitorPass` with a time-limited `validUntil` window. An email/SMS notification with the QR code is sent to the guest.
+*   **Walk-in Flow:** A guest arrives without prior notice. Security or Reception creates the visitor profile. The system sets the visit to `PENDING` and **no pass is generated**. The Host receives a notification. Once the Host accepts via `ProcessApprovalUseCase`, the pass is generated.
+
+### 3. Check-In & Multi-Gate Verification
+*   **Atomic Check-In:** Security scans the pass. `ValidateQrScanUseCase` ensures the pass is not `EXPIRED` or `REVOKED`. If valid, Firebase `runTransaction` securely locks the DB, setting Visit to `CHECKED_IN`.
+*   **Checkpoints:** Security at restricted areas (e.g., Server Room) scans the pass using `VerifyCheckpointUseCase`. This logs the location access in `checkpoint_logs` without checking the user out of the building.
+*   **Atomic Check-Out:** Scanning the pass upon exit permanently sets the Visit to `COMPLETED` and the VisitorPass to `EXPIRED`, completely blocking pass reuse.
+
+### 4. System Audit Logging
+Every critical action is logged immutably via `IAuditLogService` into the `system_audit_logs` collection to satisfy SOC2/GDPR compliance. Receptionists can export this data as a CSV.
 
 ---
 
-## Core Features
+## Test Credentials
 
-*   **Clean Architecture Enforcement:** The codebase strictly separates Domain (entities, use cases), Infrastructure (Firebase, device APIs), and Presentation (React components, Redux), ensuring the business logic remains fully decoupled and highly testable via Dependency Injection (`ServiceLocator`).
-*   **Role-Based Access Control (RBAC):** UI features and system capabilities are dynamically restricted based on the authenticated user's role (Security Guard, Receptionist, Host).
-*   **Dynamic QR Generation & Validation:** Generates secure QR tokens tied to specific visits. Scanners enforce expiration windows, check-in statuses, and revocation, blocking unauthorized entry or pass reuse.
-*   **Multi-Gate Verification:** Supports optional internal checkpoints (e.g., Executive Floor, Server Room) that log location-specific access without altering the primary check-in/out state.
-*   **Atomic Transactions:** Firebase `runTransaction` guarantees that visit state changes (e.g., Check-In, Check-Out) are completely atomic, preventing concurrency issues like double check-ins.
-*   **Immutable System Audit Logging:** Every critical state transition (Pass Generated, Check-In, Checkpoint Verified, Check-Out) writes a detailed, timestamped event to the `system_audit_logs` collection for SOC2/GDPR compliance.
-*   **Data Export & Reporting:** Receptionists can generate and natively share CSV reports summarizing daily visitor traffic or full system audit logs.
+For manual testing, you can use the following mock credentials. These route you to the appropriate UI flows based on the RBAC implementation.
+
+| Persona | Email (Login) | Password |
+| :--- | :--- | :--- |
+| **Host** | `host@company.com` | `password123` |
+| **Security Guard** | `guard@company.com` | `password123` |
+| **Receptionist** | `admin@company.com` | `password123` |
+
+*(Note: In the local dev environment, the Mock Auth Service bypasses actual Firebase Auth, but enforces the role bindings)*.
 
 ---
 
@@ -33,18 +57,30 @@ The Enterprise VMS is designed to replace legacy paper-based logbooks with a sec
 
 The project adheres to Robert C. Martin's Clean Architecture principles.
 
-### Components
+### Dependency Injection (Service Locator)
+We use a static `ServiceLocator` to inject external dependencies (`IAuditLogService`, `IStorageService`) into our Use Cases. This ensures the Domain is 100% pure and highly testable. 
+```typescript
+// Example: Use Case Decoupling
+this.auditLogger = auditLogger || ServiceLocator.getAuditLogger();
+```
 
-1.  **Domain (`src/domain/`)**
-    *   Contains the core business models (`Visit`, `Visitor`, `VisitorPass`) and pure repository/service interfaces (`IVisitDataSource`, `IAuditLogService`).
-2.  **Core (`src/core/`)**
-    *   Houses universal abstractions like `Logger`, RBAC utilities (`auth/permissions`), and the `ServiceLocator` for Dependency Injection.
-3.  **Infrastructure (`src/infrastructure/`)**
-    *   Implements the Domain interfaces. Contains concrete implementations like `FirebaseVisitDataSource` and `FirestoreAuditLogService`.
-4.  **Features (Use Cases & Presentation) (`src/features/`)**
-    *   Organized by module (e.g., `qr`, `visitor`, `dashboard`, `reports`).
-    *   Each module contains its specific Use Cases (e.g., `ProcessCheckInUseCase`) which orchestrate the domain logic, completely agnostic of the UI.
-    *   Contains the React Native UI screens (e.g., `QRScannerScreen.tsx`) which trigger the Use Cases.
+### Directory Structure
+
+```text
+src/
+├── app/                  # Redux store configuration
+├── core/                 # Shared utilities, Logger, RBAC, ServiceLocator DI
+├── domain/               # Enterprise business rules (Models, Enums, Interfaces)
+├── features/             # Feature modules (Use Cases, Screens, Components)
+│   ├── auth/             # Login and RBAC State
+│   ├── dashboard/        # Receptionist KPI Dashboard
+│   ├── notifications/    # Email/SMS Mock facades
+│   ├── qr/               # QR Scanning, Validation, and Checkpoint logic
+│   ├── reports/          # CSV Generation and Audit Exports
+│   └── visitor/          # Visitor Lifecycle (Approval, Check-In/Out)
+├── infrastructure/       # Concrete implementations (Firebase, Mock services)
+└── theme/                # Global styling and color tokens
+```
 
 ---
 
@@ -59,25 +95,6 @@ The project adheres to Robert C. Martin's Clean Architecture principles.
 | **Styling** | React Native Paper / StyleSheet |
 | **Camera/Scanner** | `expo-camera` |
 | **Navigation** | React Navigation |
-
----
-
-## Project Structure
-
-```text
-src/
-├── app/                  # Redux store configuration
-├── core/                 # Shared utilities, Logger, RBAC, ServiceLocator DI
-├── domain/               # Enterprise business rules (Models, Enums, Interfaces)
-├── features/             # Feature modules (Use Cases, Screens, Components)
-│   ├── dashboard/        # Receptionist KPI Dashboard
-│   ├── notifications/    # Email/SMS Mock facades
-│   ├── qr/               # QR Scanning, Validation, and Checkpoint logic
-│   ├── reports/          # CSV Generation and Audit Exports
-│   └── visitor/          # Visitor Lifecycle (Approval, Check-In/Out)
-├── infrastructure/       # Concrete implementations (Firebase, Mock services)
-└── theme/                # Global styling and color tokens
-```
 
 ---
 
@@ -115,6 +132,6 @@ src/
 
 ## Security
 
-*   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions.
-*   **QR Security:** QR codes contain secure tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps.
+*   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions, preventing race conditions like double check-ins.
+*   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps.
 *   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.

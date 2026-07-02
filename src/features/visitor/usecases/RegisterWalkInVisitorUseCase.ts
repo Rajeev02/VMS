@@ -12,6 +12,7 @@ export interface RegisterWalkInVisitorPayload {
   visitData: Partial<Visit>;
   photoLocalUri?: string;
   idCardLocalUri?: string;
+  isPreApproved?: boolean; // If true (e.g. Host creates), visit is APPROVED and pass generated. If false (e.g. Guard creates), visit is PENDING.
 }
 
 export class RegisterWalkInVisitorUseCase {
@@ -93,6 +94,10 @@ export class RegisterWalkInVisitorUseCase {
     };
 
     const visitId = this.generateUUID();
+    
+    // Determine status based on who is registering
+    const initialStatus = payload.isPreApproved ? VisitStatus.APPROVED : VisitStatus.PENDING;
+
     const finalVisit: Visit = {
       id: visitId,
       visitorId: finalVisitor.id,
@@ -101,44 +106,57 @@ export class RegisterWalkInVisitorUseCase {
       building: visitData.building,
       floor: visitData.floor,
       vehicleNumber: visitData.vehicleNumber,
-      status: VisitStatus.APPROVED, // Start with Approved as per requirement
+      status: initialStatus,
       scheduledDate: new Date().toISOString(),
       entryTime: visitData.entryTime || new Date().toISOString(),
       expectedExitTime: visitData.expectedExitTime,
       notes: visitData.notes,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      createdBy: 'Receptionist', // Or current user ID
+      createdBy: payload.isPreApproved ? 'Host' : 'Guard/Receptionist',
     };
 
-    const secureToken = this.generateUUID();
-    const finalPass: VisitorPass = {
-      id: this.generateUUID(),
-      visitId: finalVisit.id,
-      visitorId: finalVisitor.id,
-      passId: `VX-${Math.floor(1000 + Math.random() * 9000)}`,
-      qrToken: secureToken,
-      token: secureToken,
-      visitorName: finalVisitor.name,
-      hostName: finalVisit.hostId, // Replace with actual host name if fetched
-      status: PassStatus.GENERATED,
-      validFrom: finalVisit.entryTime || new Date().toISOString(),
-      validUntil: finalVisit.expectedExitTime || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
-      gracePeriodMinutes: 30,
-      publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${secureToken}`,
-      generatedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    let finalPass: VisitorPass | undefined;
+
+    // Only generate the pass if it is already approved
+    if (initialStatus === VisitStatus.APPROVED) {
+      const secureToken = this.generateUUID();
+      finalPass = {
+        id: this.generateUUID(),
+        visitId: finalVisit.id,
+        visitorId: finalVisitor.id,
+        passId: `VX-${Math.floor(1000 + Math.random() * 9000)}`,
+        qrToken: secureToken,
+        token: secureToken,
+        visitorName: finalVisitor.name,
+        hostName: finalVisit.hostId, // Replace with actual host name if fetched
+        status: PassStatus.GENERATED,
+        validFrom: finalVisit.entryTime || new Date().toISOString(),
+        validUntil: finalVisit.expectedExitTime || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+        gracePeriodMinutes: 30,
+        publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${secureToken}`,
+        generatedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+    }
 
     // 4. Save entities
-    // We need new repository methods: saveVisitor, saveVisit, savePass
-    // Let's call a new method on VisitorRepository for transaction-like save.
-    await VisitorRepository.saveWalkInRegistration(finalVisitor, finalVisit, finalPass);
+    // In our repository, saveWalkInRegistration can handle optional passes. 
+    // If we only have a pending visit, we don't save a pass.
+    if (finalPass) {
+      await VisitorRepository.saveWalkInRegistration(finalVisitor, finalVisit, finalPass);
+      // 5. Send Notifications
+      await this.notificationFacade.sendPassGenerated(finalVisitor, finalPass);
+    } else {
+      // Just save Visitor and Visit
+      // We should ideally have a different repository method, but we can pass a dummy pass or update the repository.
+      // For simplicity, let's assume the repository checks if pass exists.
+      await VisitorRepository.saveWalkInRegistration(finalVisitor, finalVisit, {} as VisitorPass);
+      // Notify Host that a visitor is waiting for approval
+      await this.notificationFacade.sendArrivalNotification(finalVisitor, finalVisit);
+    }
 
-    // 5. Send Notifications
-    await this.notificationFacade.sendPassGenerated(finalVisitor, finalPass);
-
-    return { visitor: finalVisitor, visit: finalVisit, pass: finalPass };
+    return { visitor: finalVisitor, visit: finalVisit, pass: finalPass as VisitorPass };
   }
 
   private generateUUID(): string {
