@@ -24,10 +24,13 @@ export class FirebasePassDataSource implements IPassDataSource {
   }
 
   async createPass(pass: Partial<VisitorPass>): Promise<VisitorPass> {
-    const id = pass.id || this.collection.doc().id;
+    const token = pass.token || pass.qrToken;
+    const id = pass.id || token || this.collection.doc().id;
     const newPass: VisitorPass = {
       ...(pass as any),
       id,
+      ...(token ? { token, qrToken: token } : {}),
+      ...(token && !pass.publicUrl ? { publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${token}` } : {}),
       generatedTime: firestore.FieldValue.serverTimestamp() as any,
     };
     await this.collection.doc(id).set(newPass);

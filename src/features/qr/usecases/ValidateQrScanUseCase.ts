@@ -17,6 +17,12 @@ export interface QrValidationResult {
   error?: string;
 }
 
+const INVALID_PASS_STATUS_MESSAGES: Record<string, string> = {
+  [PassStatus.EXPIRED]: 'Pass is EXPIRED.',
+  [PassStatus.REVOKED]: 'Pass has been REVOKED.',
+  [PassStatus.SCANNED]: 'Pass has already been scanned.',
+};
+
 export class ValidateQrScanUseCase {
   private auditLogger: IAuditLogService;
 
@@ -39,19 +45,21 @@ export class ValidateQrScanUseCase {
       const passData = passesSnapshot.docs[0].data();
       const pass = passData as VisitorPass;
 
-      if (pass.status === PassStatus.EXPIRED) {
-        await this.auditLogger.logEvent({ action: AuditAction.QR_SCANNED, visitId: pass.visitId, visitorId: pass.visitorId, details: { qrToken, status: 'INVALID', error: 'EXPIRED' }});
-        return { isValid: false, error: 'Pass is EXPIRED.', pass };
-      }
-      
-      if (pass.status === PassStatus.REVOKED) {
-        await this.auditLogger.logEvent({ action: AuditAction.QR_SCANNED, visitId: pass.visitId, visitorId: pass.visitorId, details: { qrToken, status: 'INVALID', error: 'REVOKED' }});
-        return { isValid: false, error: 'Pass has been REVOKED.', pass };
+      const statusError = INVALID_PASS_STATUS_MESSAGES[pass.status];
+      if (statusError) {
+        await this.auditLogger.logEvent({ action: AuditAction.QR_SCANNED, visitId: pass.visitId, visitorId: pass.visitorId, details: { qrToken, status: 'INVALID', error: pass.status }});
+        return { isValid: false, error: statusError, pass };
       }
 
       // Check validity window
       const now = new Date().getTime();
+      const validFrom = new Date(pass.validFrom || 0).getTime();
       const validUntil = new Date(pass.validUntil || 0).getTime();
+
+      if (validFrom && now < validFrom) {
+        await this.auditLogger.logEvent({ action: AuditAction.QR_SCANNED, visitId: pass.visitId, visitorId: pass.visitorId, details: { qrToken, status: 'INVALID', error: 'NOT_ACTIVE_YET' }});
+        return { isValid: false, error: 'Pass is not active yet.', pass };
+      }
       
       if (now > validUntil) {
         await this.auditLogger.logEvent({ action: AuditAction.QR_SCANNED, visitId: pass.visitId, visitorId: pass.visitorId, details: { qrToken, status: 'INVALID', error: 'WINDOW_EXPIRED' }});

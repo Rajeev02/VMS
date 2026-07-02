@@ -19,9 +19,9 @@ The system dynamically limits UI capabilities based on who logs in.
 
 | Persona | Role | Primary Capabilities |
 | :--- | :--- | :--- |
-| **Security Guard** | Point of Entry | Scan QR passes, Log Multi-Gate Checkpoints, Create Walk-in Visitors (which require Host approval). |
-| **Host (Employee)** | Internal Employee | Pre-approve expected guests (which generates a pass instantly), Approve/Reject walk-in guests. |
-| **Receptionist** | Admin / Monitor | View live traffic dashboard, Export Audit Logs (CSV), Override approvals. |
+| **Security Guard / Security Officer** | Point of Entry | Scan QR passes, log multi-gate checkpoints, create walk-in visitors, check visitors in/out, and manually verify visitors. |
+| **Host (Employee)** | Internal Employee | Pre-approve expected guests, approve/reject walk-in guests, and view only visits related to their own host account. |
+| **Receptionist / Admin** | Admin / Monitor | View the live traffic dashboard, register walk-ins, check visitors in/out, and export audit logs. |
 
 ### Extended Documentation
 For a deeper dive into the system's inner workings, please refer to our dedicated documentation inside the `docs/` folder:
@@ -32,13 +32,16 @@ For a deeper dive into the system's inner workings, please refer to our dedicate
 ### 2. Visitor Registration Flows
 We support both Host Pre-Approval and Walk-In flows cleanly via the `RegisterWalkInVisitorUseCase`.
 
-*   **Host Pre-Approval Flow:** An employee (Host) registers a guest in advance. The system sets the visit to `APPROVED` and dynamically generates a secure `VisitorPass` with a time-limited `validUntil` window. An email/SMS notification with the QR code is sent to the guest.
+*   **Host Pre-Approval Flow:** An employee (Host) registers a guest in advance. The system sets the visit to `APPROVED` and dynamically generates a secure `VisitorPass` with a time-limited `validUntil` window. The visitor pass URL is sent through the configured notification channels.
 *   **Walk-in Flow:** A guest arrives without prior notice. Security or Reception creates the visitor profile. The system sets the visit to `PENDING` and **no pass is generated**. The Host receives a notification. Once the Host accepts via `ProcessApprovalUseCase`, the pass is generated.
+*   **Photo Capture:** Visitor and live check-in photos are uploaded to Firebase Storage through `IStorageService`. Firestore stores the Firebase download URL, not a local device `file://` path, so the public web pass can show valid web images. If no valid image exists, the web pass falls back to a placeholder.
 
 ### 3. Web-Based Digital Pass for Visitors
 Because external visitors do not download the VMS application, the system generates a secure, web-based digital pass.
 *   Once a visit is `APPROVED`, the system creates a unique cryptographic token and generates a public URL.
-*   This URL is emailed/SMS'd to the visitor. They simply tap the link to view their dynamic QR code on their mobile browser.
+*   The pass document stores the same secure value in `id`, `qrToken`, and `token`, and share actions rebuild stale or mock URLs from the real token before sending them through WhatsApp, SMS, email, or native share.
+*   This URL is shared with the visitor. They simply tap the link to view their dynamic QR code on their mobile browser.
+*   The public pass page lives in the separate GitHub Pages project at `/Users/rajeevjoshi/Documents/GitHub/Rajeev02.github.io/public/vms/`. Its lookup supports both `token` and legacy `qrToken` fields.
 *   **Live Examples (Ready to Scan):** Try clicking these to see how the web app handles each status, or scan them using the mobile app:
     
     ✅ **Valid Passes**
@@ -50,19 +53,30 @@ Because external visitors do not download the VMS application, the system genera
     4. [Already Used/Scanned](https://rajeev02.github.io/vms/pass.html?token=scanned-123)
     5. [Revoked Pass](https://rajeev02.github.io/vms/pass.html?token=revoked-123)
 
+    Demo pass records can be refreshed with:
+    ```bash
+    node seed-passes.js
+    ```
+
 ### 4. Check-In & Multi-Gate Verification
-*   **Atomic Check-In:** Security scans the pass. `ValidateQrScanUseCase` ensures the pass is not `EXPIRED` or `REVOKED`. If valid, Firebase `runTransaction` securely locks the DB, setting Visit to `CHECKED_IN`.
+*   **Atomic Check-In:** Security scans the pass. `ValidateQrScanUseCase` ensures the pass exists, is inside its `validFrom`/`validUntil` window, and is not `EXPIRED`, `REVOKED`, or `SCANNED`. If valid, Firebase `runTransaction` securely locks the DB, setting Visit to `CHECKED_IN`.
 *   **Checkpoints:** Security at restricted areas (e.g., Server Room) scans the pass using `VerifyCheckpointUseCase`. This logs the location access in `checkpoint_logs` without checking the user out of the building.
 *   **Atomic Check-Out:** Scanning the pass upon exit permanently sets the Visit to `COMPLETED` and the VisitorPass to `EXPIRED`, completely blocking pass reuse.
 
-### 5. System Audit Logging
+### 5. Dashboard Data Scoping
+Dashboard data is scoped to the authenticated user:
+*   **Security Guard, Security Officer, Receptionist, Company Admin, and Super Admin** users can see operational visit data across the site.
+*   **Host and Standard Employee** users see only visits where `hostId` or `createdBy` matches their authenticated user ID.
+*   The dashboard greeting uses the stored user name when available and falls back to email, role, or `User`.
+
+### 6. System Audit Logging
 Every critical action is logged immutably via `IAuditLogService` into the `system_audit_logs` collection to satisfy SOC2/GDPR compliance. Receptionists can export this data as a CSV.
 
 ---
 
 ## Test Credentials
 
-For manual testing, you can use the following mock credentials. These route you to the appropriate UI flows based on the RBAC implementation.
+For manual testing, you can use the following Firebase Auth credentials. These route you to the appropriate UI flows based on the RBAC implementation.
 
 | Persona | Email (Login) | Password |
 | :--- | :--- | :--- |
@@ -70,8 +84,18 @@ For manual testing, you can use the following mock credentials. These route you 
 | **Security Guard** | `guard@company.com` | `password123` |
 | **Security Officer** | `officer@company.com` | `password123` |
 | **Receptionist** | `admin@company.com` | `password123` |
+| **Seed Host** | `host@vms.com` | `Password123!` |
+| **Seed Security Guard** | `security@vms.com` | `Password123!` |
+| **Seed Receptionist** | `receptionist@vms.com` | `Password123!` |
+| **Seed Company Admin** | `companyadmin@vms.com` | `Password123!` |
+| **Seed Super Admin** | `superadmin@vms.com` | `Password123!` |
 
-*(Note: In the local dev environment, the Mock Auth Service bypasses actual Firebase Auth, but enforces the role bindings)*.
+To create or refresh the `@company.com` demo users, run:
+```bash
+node seedCredentials.js
+```
+
+The seeded `@vms.com` users are part of the Firebase seed data and are useful for validating role-specific dashboards.
 
 ---
 
@@ -95,7 +119,7 @@ src/
 ├── domain/               # Enterprise business rules (Models, Enums, Interfaces)
 ├── features/             # Feature modules (Use Cases, Screens, Components)
 │   ├── auth/             # Login and RBAC State
-│   ├── dashboard/        # Receptionist KPI Dashboard
+│   ├── dashboard/        # Role-scoped KPI Dashboard
 │   ├── notifications/    # Email/SMS Mock facades
 │   ├── qr/               # QR Scanning, Validation, and Checkpoint logic
 │   ├── reports/          # CSV Generation and Audit Exports
@@ -177,7 +201,8 @@ If you run into issues while evaluating or running the project, check these comm
 ## Security
 
 *   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions, preventing race conditions like double check-ins.
-*   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps.
+*   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps and rejected for invalid states such as `EXPIRED`, `REVOKED`, and `SCANNED`.
+*   **Public Pass Images:** Public browser passes only render HTTP/HTTPS image URLs. Invalid local device paths fall back to a placeholder image.
 *   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.
 
 ---

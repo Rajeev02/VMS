@@ -13,6 +13,18 @@ import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import { VisitorRepository } from '../VisitorRepository';
 import { useRoute } from '@react-navigation/native';
 
+const buildPublicPassUrl = (token?: string) => {
+  return token ? `https://rajeev02.github.io/vms/pass.html?token=${token}` : '';
+};
+
+const resolvePublicPassUrl = (publicUrl?: string, token?: string) => {
+  if (!publicUrl || publicUrl.includes('token=mock')) {
+    return buildPublicPassUrl(token);
+  }
+
+  return publicUrl;
+};
+
 export const DigitalPassScreen = () => {
   const theme = useTheme<AppTheme>();
   const navigation = useNavigation<any>();
@@ -43,7 +55,7 @@ export const DigitalPassScreen = () => {
               qrToken: pass.qrToken,
               status: pass.status,
               instructions: pass.instructions || 'Please bring a valid Government ID.',
-              publicUrl: pass.publicUrl,
+              publicUrl: resolvePublicPassUrl(pass.publicUrl, pass.qrToken || pass.token),
             });
           }
         } catch (error) {
@@ -56,7 +68,8 @@ export const DigitalPassScreen = () => {
 
   const handleShare = async (channel: string) => {
     try {
-      const message = `Here is your visitor pass for ${passDetails.building}. Link: ${passDetails.publicUrl}`;
+      const publicUrl = resolvePublicPassUrl(passDetails.publicUrl, passDetails.qrToken);
+      const message = `Here is your visitor pass for ${passDetails.building}. Link: ${publicUrl}`;
       const urlMessage = encodeURIComponent(message);
       
       switch (channel) {
@@ -73,7 +86,7 @@ export const DigitalPassScreen = () => {
         default:
           await Share.share({
             message: message,
-            url: passDetails.publicUrl,
+            url: publicUrl,
             title: 'Visitor Pass'
           });
           break;

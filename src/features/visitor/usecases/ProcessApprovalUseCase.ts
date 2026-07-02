@@ -48,14 +48,17 @@ export class ProcessApprovalUseCase {
       Logger.info(`[ProcessApprovalUseCase] Triggering pass generation for approved visit ${visitId}`);
       
       const secureToken = this.generateUUID();
-      const passId = this.generateUUID();
-
       const pass: VisitorPass = {
-        id: passId,
+        id: secureToken,
         visitId,
         visitorId: updatedVisit.visitorId,
         passId: `VX-APRV-${Math.floor(1000 + Math.random() * 9000)}`,
         qrToken: secureToken,
+        token: secureToken,
+        visitorName: visitor?.name,
+        hostName: updatedVisit.hostId,
+        company: visitor?.company,
+        purpose: updatedVisit.purpose,
         status: PassStatus.GENERATED,
         publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${secureToken}`,
         validFrom: updatedVisit.entryTime || new Date().toISOString(),
@@ -93,4 +96,3 @@ export class ProcessApprovalUseCase {
     });
   }
 }
-

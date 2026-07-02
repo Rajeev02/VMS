@@ -15,6 +15,37 @@ import { ProcessCheckOutUseCase } from '../../visitor/usecases/ProcessCheckOutUs
 import { ProcessCheckInUseCase } from '../../visitor/usecases/ProcessCheckInUseCase';
 import { Alert } from 'react-native';
 
+const canViewAllVisits = (user: any) => {
+  const role = (user?.role || '').toUpperCase();
+  return !!user && (
+    hasPermission(user.permissions || [], Permissions.ALL) ||
+    hasPermission(user.permissions || [], Permissions.VIEW_ALL_VISITORS) ||
+    role.includes('ADMIN') ||
+    role.includes('SECURITY') ||
+    role.includes('RECEPTIONIST')
+  );
+};
+
+const isVisitVisibleForUser = (visit: any, user: any) => {
+  if (!user) return false;
+  if (canViewAllVisits(user)) return true;
+  const role = (user.role || '').toUpperCase();
+  if (hasPermission(user.permissions || [], Permissions.VIEW_OWN_VISITORS) || role.includes('HOST') || role.includes('EMPLOYEE')) {
+    return visit.hostId === user.id || visit.createdBy === user.id || visit.hostId === user.name;
+  }
+
+  return false;
+};
+
+const getInitials = (name?: string, fallback?: string) => {
+  const value = (name || fallback || 'User').trim();
+  return value
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join('');
+};
+
 export const DashboardScreen = () => {
   const theme = useTheme<AppTheme>();
   const dispatch = useDispatch();
@@ -33,17 +64,29 @@ export const DashboardScreen = () => {
   React.useEffect(() => {
     const firestore = require('@react-native-firebase/firestore').default;
     let isMounted = true;
+
+    if (!user) {
+      setAllVisits([]);
+      setStats({ expected: 0, active: 0, completed: 0 });
+      setRefreshing(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
+    setRefreshing(true);
     
-    const unsubscribe = firestore().collection('visits').onSnapshot(async (snapshot: any) => {
+    const visitsQuery = canViewAllVisits(user)
+      ? firestore().collection('visits')
+      : firestore().collection('visits').where('hostId', '==', user.id);
+
+    const unsubscribe = visitsQuery.onSnapshot(async (snapshot: any) => {
       let expected = 0;
       let active = 0;
       let completed = 0;
 
       const promises = snapshot.docs.map(async (doc: any) => {
         const v = doc.data();
-        if (v.status === VisitStatus.APPROVED || v.status === VisitStatus.PENDING) expected++;
-        else if (v.status === VisitStatus.CHECKED_IN) active++;
-        else if (v.status === VisitStatus.COMPLETED || v.status === VisitStatus.CHECKED_OUT) completed++;
 
         let visitorName = 'Unknown';
         try {
@@ -56,10 +99,22 @@ export const DashboardScreen = () => {
 
       const results = await Promise.all(promises);
       if (!isMounted) return;
-      results.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      const visibleResults = results.filter(visit => isVisitVisibleForUser(visit, user));
+      visibleResults.forEach((visit) => {
+        if (visit.status === VisitStatus.APPROVED || visit.status === VisitStatus.PENDING) expected++;
+        else if (visit.status === VisitStatus.CHECKED_IN) active++;
+        else if (visit.status === VisitStatus.COMPLETED || visit.status === VisitStatus.CHECKED_OUT) completed++;
+      });
+      visibleResults.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
       
-      setAllVisits(results);
+      setAllVisits(visibleResults);
       setStats({ expected, active, completed });
+      setRefreshing(false);
+    }, (error: any) => {
+      if (!isMounted) return;
+      console.error('Dashboard visits listener failed', error);
+      setAllVisits([]);
+      setStats({ expected: 0, active: 0, completed: 0 });
       setRefreshing(false);
     });
 
@@ -67,7 +122,7 @@ export const DashboardScreen = () => {
       isMounted = false;
       unsubscribe();
     };
-  }, []);
+  }, [user]);
 
   const displayedVisits = React.useMemo(() => {
     return allVisits.filter(v => {
@@ -101,6 +156,8 @@ export const DashboardScreen = () => {
   const canScanQR = user ? hasPermission(user.permissions, Permissions.SCAN_QR) : false;
   const canRegisterWalkIn = user ? hasPermission(user.permissions, Permissions.REGISTER_WALK_IN) : false;
   const canManualVerify = user ? hasPermission(user.permissions, Permissions.MANUAL_VERIFY) : false;
+  const displayName = user?.name?.trim() || user?.email || user?.role || 'User';
+  const avatarText = getInitials(user?.name, user?.role);
 
   const quickActions = [
     ...(canScanQR ? [{ id: 1, title: 'Scan QR', icon: 'qr-code-scanner', color: '#10B981', action: () => navigation.navigate('Activity') }] : []),
@@ -113,11 +170,11 @@ export const DashboardScreen = () => {
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <View style={styles.userInfo}>
           <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
-            <Text style={{ color: 'white', fontWeight: 'bold' }}>SO</Text>
+            <Text style={{ color: 'white', fontWeight: 'bold' }}>{avatarText}</Text>
           </View>
           <View style={styles.userTextContainer}>
             <Text style={[styles.greeting, { color: theme.custom.colors.textSecondary }]}>Good Morning,</Text>
-            <Text style={[styles.userName, { color: theme.custom.colors.textPrimary }]}>{user?.role || 'User'}</Text>
+            <Text style={[styles.userName, { color: theme.custom.colors.textPrimary }]} numberOfLines={1}>{displayName}</Text>
           </View>
         </View>
         <TouchableOpacity onPress={() => navigation.navigate('Settings')}>

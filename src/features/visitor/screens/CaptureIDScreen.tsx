@@ -8,6 +8,7 @@ import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { VisitorRepository } from '../../visitor/VisitorRepository';
+import { ServiceLocator } from '../../../core/di/ServiceLocator';
 
 export const CaptureIDScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -74,12 +75,11 @@ export const CaptureIDScreen = () => {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const { LocalStorageService } = require('../../../infrastructure/storage/LocalStorageService');
       const { RegisterWalkInVisitorUseCase } = require('../usecases/RegisterWalkInVisitorUseCase');
       const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
       const { NotificationFacade } = require('../../notifications/NotificationFacade');
       
-      const storageService = new LocalStorageService();
+      const storageService = ServiceLocator.getStorageService();
       const facade = new NotificationFacade(
         new MockEmailService(),
         new MockSmsService(),

@@ -31,6 +31,18 @@ export class RegisterWalkInVisitorUseCase {
     return re.test(phone);
   }
 
+  private async uploadOptionalFile(localUri: string | undefined, path: string): Promise<string | undefined> {
+    if (!localUri) return undefined;
+    if (/^https?:\/\//i.test(localUri)) return localUri;
+
+    try {
+      return await this.storageService.uploadFile(localUri, path);
+    } catch (error) {
+      Logger.warn(`[RegisterWalkInVisitorUseCase] Failed to upload ${path}. Continuing without remote image.`, error);
+      return undefined;
+    }
+  }
+
   async execute(payload: RegisterWalkInVisitorPayload): Promise<{ visitor: Visitor, visit: Visit, pass: VisitorPass }> {
     Logger.info(`[RegisterWalkInVisitorUseCase] Executing`);
 
@@ -53,12 +65,8 @@ export class RegisterWalkInVisitorUseCase {
     let photoUrl = visitorData.photoUrl;
     let idCardUrl = visitorData.idCardUrl;
     
-    if (photoLocalUri) {
-      photoUrl = await this.storageService.uploadFile(photoLocalUri, `visitors/photos/`);
-    }
-    if (idCardLocalUri) {
-      idCardUrl = await this.storageService.uploadFile(idCardLocalUri, `visitors/ids/`);
-    }
+    photoUrl = await this.uploadOptionalFile(photoLocalUri || photoUrl, `visitors/photos/`);
+    idCardUrl = await this.uploadOptionalFile(idCardLocalUri || idCardUrl, `visitors/ids/`);
 
     const updatedVisitorData = {
       ...visitorData,
@@ -122,7 +130,7 @@ export class RegisterWalkInVisitorUseCase {
     if (initialStatus === VisitStatus.APPROVED) {
       const secureToken = this.generateUUID();
       finalPass = {
-        id: this.generateUUID(),
+        id: secureToken,
         visitId: finalVisit.id,
         visitorId: finalVisitor.id,
         passId: `VX-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -130,6 +138,8 @@ export class RegisterWalkInVisitorUseCase {
         token: secureToken,
         visitorName: finalVisitor.name,
         hostName: finalVisit.hostId, // Replace with actual host name if fetched
+        company: finalVisitor.company,
+        purpose: finalVisit.purpose,
         status: PassStatus.GENERATED,
         validFrom: finalVisit.entryTime || new Date().toISOString(),
         validUntil: finalVisit.expectedExitTime || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),

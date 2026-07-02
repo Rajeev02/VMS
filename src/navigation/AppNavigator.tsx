@@ -17,6 +17,8 @@ import { WalkInRegistrationScreen } from '../features/visitor/screens/WalkInRegi
 import { CaptureIDScreen } from '../features/visitor/screens/CaptureIDScreen';
 import { CheckInScreen } from '../features/visitor/screens/CheckInScreen';
 import { VerifyWithoutPassScreen } from '../features/visitor/screens/VerifyWithoutPassScreen';
+import { VisitorDetailsScreen } from '../features/visitor/screens/VisitorDetailsScreen';
+import { DigitalPassScreen } from '../features/visitor/screens/DigitalPassScreen';
 
 import { HostDashboardScreen } from '../features/visitor/screens/HostDashboardScreen';
 import { ApprovalDetailScreen } from '../features/visitor/screens/ApprovalDetailScreen';
@@ -102,6 +104,8 @@ export const AppNavigator = () => {
       <Stack.Screen name="Tabs" component={TabNavigator} options={{ headerShown: false }} />
       <Stack.Screen name="WalkInRegistration" component={WalkInRegistrationScreen} options={{ headerShown: false, title: 'Walk-in Registration' }} />
       <Stack.Screen name="CaptureID" component={CaptureIDScreen} options={{ headerShown: false, title: 'Capture Government ID' }} />
+      <Stack.Screen name="VisitorDetails" component={VisitorDetailsScreen} options={{ headerShown: false, title: 'Visitor Details' }} />
+      <Stack.Screen name="DigitalPass" component={DigitalPassScreen} options={{ headerShown: false, title: 'Visitor Pass' }} />
       <Stack.Screen name="CheckIn" component={CheckInScreen} options={{ headerShown: false, title: 'Check-In' }} />
       <Stack.Screen name="VerifyWithoutPass" component={VerifyWithoutPassScreen} options={{ headerShown: false, title: 'Verify Identity' }} />
       <Stack.Screen name="ApprovalDetail" component={ApprovalDetailScreen} options={{ headerShown: false, title: 'Approval Details' }} />

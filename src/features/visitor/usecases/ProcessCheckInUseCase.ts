@@ -48,8 +48,12 @@ export class ProcessCheckInUseCase {
     let updatedVisitor = visitor;
     if (payload.newPhotoLocalUri) {
       Logger.info(`[ProcessCheckInUseCase] Uploading new live photo for visitor`);
-      const newPhotoUrl = await this.storageService.uploadFile(payload.newPhotoLocalUri, 'visitors/photos/live/');
-      updatedVisitor = await VisitorRepository.updateVisitor(visitor.id, { photoUrl: newPhotoUrl });
+      try {
+        const newPhotoUrl = await this.storageService.uploadFile(payload.newPhotoLocalUri, 'visitors/photos/live/');
+        updatedVisitor = await VisitorRepository.updateVisitor(visitor.id, { photoUrl: newPhotoUrl });
+      } catch (error) {
+        Logger.warn('[ProcessCheckInUseCase] Failed to upload live photo. Continuing check-in without updating photo.', error);
+      }
     }
 
     // 3. Execute the Firestore Check-In Transaction safely in the Data layer

@@ -12,6 +12,10 @@ export interface VisitorPass {
   token?: string; 
   visitorName?: string;
   hostName?: string;
+  company?: string;
+  department?: string;
+  purpose?: string;
+  photoUrl?: string;
   
   status: PassStatus;
   

@@ -14,11 +14,11 @@ async function seed() {
   const passesRef = db.collection('visitor_passes');
   
   const combos = [
-    { name: "John Doe (Valid)", status: "GENERATED", token: "valid-123" },
-    { name: "Jane Smith (Valid)", status: "GENERATED", token: "valid-456" },
-    { name: "Bob Expired (Expired)", status: "EXPIRED", token: "expired-123" },
-    { name: "Alice Used (Scanned)", status: "SCANNED", token: "scanned-123" },
-    { name: "Eve Revoked (Revoked)", status: "REVOKED", token: "revoked-123" },
+    { name: "John Doe (Valid)", status: "GENERATED", token: "valid-123", validForMs: 86400000 },
+    { name: "Jane Smith (Valid)", status: "GENERATED", token: "valid-456", validForMs: 86400000 },
+    { name: "Bob Expired (Expired)", status: "EXPIRED", token: "expired-123", validForMs: -3600000 },
+    { name: "Alice Used (Scanned)", status: "SCANNED", token: "scanned-123", validForMs: 86400000 },
+    { name: "Eve Revoked (Revoked)", status: "REVOKED", token: "revoked-123", validForMs: 86400000 },
   ];
 
   for (let i = 0; i < combos.length; i++) {
@@ -51,7 +51,7 @@ async function seed() {
     });
 
     // Create Pass
-    const passId = "mock-pass-" + i;
+    const passId = combo.token;
     await passesRef.doc(passId).set({
       id: passId,
       visitId: visitId,
@@ -66,7 +66,7 @@ async function seed() {
       purpose: "Meeting",
       status: combo.status,
       validFrom: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-      validUntil: new Date(Date.now() + 86400000).toISOString(), // +1 day
+      validUntil: new Date(Date.now() + combo.validForMs).toISOString(),
       gracePeriodMinutes: 30,
       publicUrl: `https://rajeev02.github.io/vms/pass.html?token=${combo.token}`,
       generatedAt: new Date().toISOString(),

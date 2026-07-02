@@ -5,6 +5,7 @@ import { IDocumentService } from '../../domain/services/IDocumentService';
 import { MockDocumentService } from '../../infrastructure/documents/MockDocumentService';
 
 import { IStorageService } from '../../domain/services/IStorageService';
+import { FirebaseStorageDataSource } from '../../infrastructure/firebase/FirebaseStorageDataSource';
 
 import { NotificationFacade } from '../../features/notifications/NotificationFacade';
 
@@ -30,7 +31,7 @@ export class ServiceLocator {
 
   static getStorageService(): IStorageService {
     if (!this.storageService) {
-      this.storageService = {} as any; // Using dummy since mock isn't found
+      this.storageService = new FirebaseStorageDataSource();
     }
     return this.storageService;
   }

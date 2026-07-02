@@ -6,8 +6,8 @@ service firebase.storage {
       return request.auth != null;
     }
 
-    match /visitors/{visitorId}/{fileName} {
-      allow read: if isAuthenticated();
+    match /visitors/{allPaths=**} {
+      allow read: if true;
       allow write: if isAuthenticated();
     }
 
