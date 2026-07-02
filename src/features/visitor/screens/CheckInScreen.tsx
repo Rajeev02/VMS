@@ -11,6 +11,8 @@ import { VisitorRepository } from '../VisitorRepository';
 import { ProcessCheckInUseCase } from '../usecases/ProcessCheckInUseCase';
 import * as ImagePicker from 'expo-image-picker';
 import Logger from '../../../core/logger/Logger';
+import { resetToDashboard } from '../../../navigation/navigationHelpers';
+import { ServiceLocator } from '../../../core/di/ServiceLocator';
 
 export const CheckInScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -50,7 +52,6 @@ export const CheckInScreen = () => {
     try {
       const { NotificationFacade } = require('../../notifications/NotificationFacade');
       const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
-      const { LocalStorageService } = require('../../../infrastructure/storage/LocalStorageService');
       
       const facade = new NotificationFacade(
         new MockEmailService(),
@@ -58,7 +59,7 @@ export const CheckInScreen = () => {
         new MockWhatsAppService(),
         new MockPushNotificationService()
       );
-      const storageService = new LocalStorageService();
+      const storageService = ServiceLocator.getStorageService();
       
       const useCase = new ProcessCheckInUseCase(facade, storageService);
       
@@ -73,7 +74,7 @@ export const CheckInScreen = () => {
       });
       
       Alert.alert('Check-In Successful', 'The visitor has been checked in and the host has been notified.', [
-        { text: 'OK', onPress: () => navigation.navigate('DashboardTab') }
+        { text: 'OK', onPress: () => resetToDashboard(navigation) }
       ]);
     } catch (e: any) {
       console.log('Check-In Error:', e);

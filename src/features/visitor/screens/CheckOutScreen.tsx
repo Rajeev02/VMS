@@ -6,6 +6,7 @@ import { AppTheme } from '../../../theme/theme';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { PrimaryButton } from '../../../components/PrimaryButton';
 import { VisitorRepository } from '../VisitorRepository';
+import { resetToDashboard } from '../../../navigation/navigationHelpers';
 
 export const CheckOutScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -27,7 +28,7 @@ export const CheckOutScreen = () => {
 
   const handleCheckOut = () => {
     // Navigate back to Dashboard on success for demo
-    navigation.navigate('DashboardTab');
+    resetToDashboard(navigation);
   };
 
   return (
