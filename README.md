@@ -135,3 +135,53 @@ src/
 *   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions, preventing race conditions like double check-ins.
 *   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps.
 *   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.
+
+---
+
+## Future Enhancements & Roadmap
+
+The Enterprise VMS is built on a highly extensible foundation. Here are several feature flows that can be implemented next:
+
+1. **Facial Recognition Check-in**: Integrate a third-party SDK (like AWS Rekognition or Azure Face) to allow VIP visitors to check-in via face scan instead of a QR code.
+2. **Push Notifications (FCM/APNs)**: Replace the current `MockNotificationServices` with actual Firebase Cloud Messaging to send real-time push alerts to Hosts when their guests arrive.
+3. **Hardware Integration (Turnstiles/Printers)**: Connect the VMS to physical turnstiles via Bluetooth/Wi-Fi APIs, or integrate with badge printers (e.g., Brother QL series) to automatically print sticky badges upon check-in.
+4. **Self-Service Kiosk Mode**: Create a locked-down iPad/Android tablet view where walk-in visitors can register themselves, take their own photo, and automatically ping the Host for approval.
+5. **Advanced Analytics Dashboard**: Add charts and graphs (using libraries like `react-native-chart-kit`) to the Receptionist dashboard to visualize peak visitor hours and checkpoint bottlenecks.
+
+---
+
+## Migrating Away From Firebase (Custom Backend)
+
+Because this project strictly adheres to **Clean Architecture**, replacing Firebase with your own custom backend (e.g., Node.js/Express, Spring Boot, or Go) is incredibly straightforward and requires **zero changes to the UI or Use Cases**.
+
+### Migration Steps:
+
+1. **Create New Data Sources**: 
+   Inside `src/infrastructure/`, create new files implementing the Domain interfaces. For example, create `RestApiVisitDataSource.ts` that implements `IVisitDataSource` using Axios/Fetch instead of Firestore.
+   
+2. **Implement API Calls**:
+   ```typescript
+   // Example of RestApiVisitDataSource.ts
+   export class RestApiVisitDataSource implements IVisitDataSource {
+     async updateVisit(id: string, updates: Partial<Visit>): Promise<Visit> {
+       const response = await axios.patch(`https://api.yourcompany.com/visits/${id}`, updates);
+       return response.data;
+     }
+     // ... implement other interface methods
+   }
+   ```
+
+3. **Update the Service Locator**:
+   Open `src/core/di/ServiceLocator.ts` and swap out the Firebase implementations for your new REST implementations.
+   ```typescript
+   // Change this:
+   // this.auditLogger = new FirestoreAuditLogService();
+   
+   // To this:
+   this.auditLogger = new RestApiAuditLogService();
+   ```
+
+4. **Migrate Auth & Storage**:
+   Similarly, swap out Firebase Auth with JWT/OAuth logic in your Redux slices, and replace Firebase Storage with your own S3/Blob storage uploads in `IStorageService`.
+
+Because the entire Domain and Use Case layer only speaks to the interfaces (like `IVisitDataSource`), the rest of the application will seamlessly switch to your custom backend without breaking a single business rule!
