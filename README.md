@@ -101,7 +101,7 @@ For manual testing, you can use the following Firebase Auth credentials. These r
 
 To create or refresh the `@company.com` demo users, run:
 ```bash
-node seedCredentials.js
+FIREBASE_WEB_API_KEY=your_firebase_web_api_key node seedCredentials.js
 ```
 
 The seeded `@vms.com` users are part of the Firebase seed data and are useful for validating role-specific dashboards.
@@ -212,6 +212,7 @@ If you run into issues while evaluating or running the project, check these comm
 *   **Transaction Safety:** Database writes for Check-In and Check-Out are locked via Firestore native transactions, preventing race conditions like double check-ins.
 *   **QR Security:** QR codes contain secure random tokens, not plain-text user data. Passes are strictly validated against `validFrom` and `validUntil` timestamps and rejected for invalid states such as `EXPIRED`, `REVOKED`, and `SCANNED`.
 *   **Public Pass Images:** Public browser passes only render HTTP/HTTPS image URLs. Invalid local device paths fall back to a placeholder image.
+*   **Firebase Config Hygiene:** Real `google-services.json`, `GoogleService-Info.plist`, service-account keys, and API keys must stay local and must not be committed. Use environment variables such as `FIREBASE_WEB_API_KEY` for local scripts.
 *   **Audit Trail:** The `IAuditLogService` captures the `userId` of the security guard/receptionist performing any mutating action, ensuring non-repudiation.
 
 ---

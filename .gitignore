@@ -47,3 +47,5 @@ yarn-error.*
 # Firebase Service Account
 config/serviceAccountKey.json
 keys/
+google-services.json
+GoogleService-Info.plist

@@ -1,7 +1,12 @@
 const https = require('https');
 
-const API_KEY = 'AIzaSyD9i4bKn9sBZQ_oPYtZkrOw67AtyBr3Zx8';
-const PROJECT_ID = 'visitor-management-syste-f6453';
+const API_KEY = process.env.FIREBASE_WEB_API_KEY;
+const PROJECT_ID = process.env.FIREBASE_PROJECT_ID || 'visitor-management-syste-f6453';
+
+if (!API_KEY) {
+  console.error('Missing FIREBASE_WEB_API_KEY. Run with: FIREBASE_WEB_API_KEY=your_key node seedCredentials.js');
+  process.exit(1);
+}
 
 const users = [
   { email: 'host@company.com', password: 'password123', role: 'Host', name: 'Demo Host' },
