@@ -2,11 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { Text, useTheme, ActivityIndicator } from 'react-native-paper';
 import { useRoute, useNavigation } from '@react-navigation/native';
+import { useSelector } from 'react-redux';
 import { AppTheme } from '../../../theme/theme';
+import { RootState } from '../../../app/store';
 import Logger from '../../../core/logger/Logger';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
 import { StatusBadge } from '../../../components/StatusBadge';
 import { SecondaryButton } from '../../../components/SecondaryButton';
+import { PrimaryButton } from '../../../components/PrimaryButton';
 
 // Domain Models & Repositories
 import { Visitor } from '../../../domain/models/Visitor';
@@ -17,17 +20,24 @@ import { VisitRepository } from '../../../domain/repositories/VisitRepository';
 import { AuditRepository } from '../../../domain/repositories/AuditRepository';
 import { VisitStatus } from '../../../domain/models/enums';
 import { PermissionGuard } from '../../../core/auth/PermissionGuard';
-import { Permissions } from '../../../core/auth/permissions';
+import { hasPermission, Permissions } from '../../../core/auth/permissions';
+
+const canRenderImageUri = (uri?: string) => {
+  return !!uri && /^(https?:\/\/|file:\/\/)/i.test(uri);
+};
 
 export const VisitorDetailsScreen = () => {
   const theme = useTheme<AppTheme>();
   const route = useRoute<any>();
   const navigation = useNavigation<any>();
+  const user = useSelector((state: RootState) => state.auth.user);
   
   const [visitor, setVisitor] = useState<Visitor | null>(null);
   const [visit, setVisit] = useState<Visit | null>(null);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [avatarLoadFailed, setAvatarLoadFailed] = useState(false);
+  const [idCardLoadFailed, setIdCardLoadFailed] = useState(false);
   
   const fetchDetails = async () => {
     try {
@@ -40,6 +50,8 @@ export const VisitorDetailsScreen = () => {
           const currentVisitor = await VisitorRepository.getVisitorById(currentVisit.visitorId);
           if (currentVisitor) {
             setVisitor(currentVisitor);
+            setAvatarLoadFailed(false);
+            setIdCardLoadFailed(false);
           }
           
           const logs = await AuditRepository.getLogsForEntity('VISIT', currentVisit.id);
@@ -75,6 +87,61 @@ export const VisitorDetailsScreen = () => {
     }
   };
 
+  const userRole = (user?.role || '').toUpperCase();
+  const canManagePendingVisit = !!user && (
+    hasPermission(user.permissions || [], Permissions.CREATE_PRE_APPROVED) ||
+    hasPermission(user.permissions || [], Permissions.REGISTER_WALK_IN) ||
+    hasPermission(user.permissions || [], Permissions.CHECK_IN) ||
+    hasPermission(user.permissions || [], Permissions.ALL) ||
+    userRole.includes('ADMIN') ||
+    userRole.includes('RECEPTIONIST') ||
+    userRole.includes('SECURITY') ||
+    userRole.includes('HOST')
+  );
+
+  const handleApproveAndGeneratePass = async () => {
+    if (!visit) return;
+    try {
+      setLoading(true);
+      const { ProcessApprovalUseCase } = require('../usecases/ProcessApprovalUseCase');
+      const useCase = new ProcessApprovalUseCase();
+      await useCase.execute(visit.id, 'APPROVE', user?.id || visit.hostId);
+      setLoading(false);
+      navigation.navigate('DigitalPass', { visitId: visit.id });
+    } catch (error) {
+      Logger.error('Failed to approve and generate pass', error);
+      setLoading(false);
+    }
+  };
+
+  const handleCancelVisit = async () => {
+    if (!visit) return;
+    try {
+      await VisitRepository.updateVisit(visit.id, { status: VisitStatus.CANCELLED });
+      await fetchDetails();
+    } catch (error) {
+      Logger.error('Failed to cancel visit', error);
+    }
+  };
+
+  const handleSendApprovalReminder = async () => {
+    if (!visit || !visitor) return;
+    try {
+      const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
+      const { NotificationFacade } = require('../../notifications/NotificationFacade');
+      const facade = new NotificationFacade(
+        new MockEmailService(),
+        new MockSmsService(),
+        new MockWhatsAppService(),
+        new MockPushNotificationService()
+      );
+      await facade.sendArrivalNotification(visitor, visit);
+      Logger.info(`[VisitorDetailsScreen] Approval reminder sent for visit=${visit.id}`);
+    } catch (error) {
+      Logger.error('Failed to send approval reminder', error);
+    }
+  };
+
   if (loading) {
     return (
       <View style={[styles.center, { backgroundColor: theme.custom.colors.background }]}>
@@ -107,8 +174,8 @@ export const VisitorDetailsScreen = () => {
             <Icon name="arrow-back" size={24} color={theme.custom.colors.textPrimary} />
           </TouchableOpacity>
           <View style={styles.avatarContainer}>
-            {visitor.photoUrl ? (
-              <Image source={{ uri: visitor.photoUrl }} style={styles.avatarImage} />
+            {canRenderImageUri(visitor.photoUrl) && !avatarLoadFailed ? (
+              <Image source={{ uri: visitor.photoUrl }} style={styles.avatarImage} onError={() => setAvatarLoadFailed(true)} />
             ) : (
               <View style={[styles.avatar, { backgroundColor: theme.colors.primary + '20' }]}>
                 <Icon name="person" size={40} color={theme.colors.primary} />
@@ -141,10 +208,17 @@ export const VisitorDetailsScreen = () => {
           {visitor.governmentId && <DetailRow label="Gov ID" value="****" theme={theme} />}
         </View>
 
-        {visitor.idCardUrl && (
+        {canRenderImageUri(visitor.idCardUrl) && (
           <View style={styles.verificationSection}>
             <Text style={[styles.sectionTitle, { color: theme.custom.colors.textPrimary }]}>Verification Documents</Text>
-            <Image source={{ uri: visitor.idCardUrl }} style={styles.idCardImage} />
+            {!idCardLoadFailed ? (
+              <Image source={{ uri: visitor.idCardUrl }} style={styles.idCardImage} onError={() => setIdCardLoadFailed(true)} />
+            ) : (
+              <View style={[styles.documentPlaceholder, { borderColor: theme.custom.colors.border }]}>
+                <Icon name="description" size={36} color={theme.custom.colors.textSecondary} />
+                <Text style={[styles.documentPlaceholderText, { color: theme.custom.colors.textSecondary }]}>Document preview unavailable</Text>
+              </View>
+            )}
           </View>
         )}
 
@@ -165,12 +239,16 @@ export const VisitorDetailsScreen = () => {
 
         <View style={styles.actions}>
           {visit.status === VisitStatus.PENDING && (
-            <PermissionGuard permission={Permissions.CREATE_PRE_APPROVED}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                <SecondaryButton title="Reject" onPress={() => handleUpdateStatus(VisitStatus.REJECTED)} style={{ flex: 1, marginRight: 8, borderColor: theme.custom.colors.warning }} textStyle={{ color: theme.custom.colors.warning }} />
-                <SecondaryButton title="Approve" onPress={() => handleUpdateStatus(VisitStatus.APPROVED)} style={{ flex: 1, marginLeft: 8, backgroundColor: theme.colors.primary }} textStyle={{ color: 'white' }} />
+            <View style={{ marginBottom: 16 }}>
+              {canManagePendingVisit && (
+                <PrimaryButton title="Approve & Generate Pass" onPress={handleApproveAndGeneratePass} style={{ marginBottom: 12 }} />
+              )}
+              <SecondaryButton title="Send Approval Reminder" onPress={handleSendApprovalReminder} style={{ marginBottom: 12 }} />
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                <SecondaryButton title="Cancel" onPress={handleCancelVisit} style={{ flex: 1, marginRight: 8, borderColor: theme.custom.colors.error }} textStyle={{ color: theme.custom.colors.error }} />
+                <SecondaryButton title="Reject" onPress={() => handleUpdateStatus(VisitStatus.REJECTED)} style={{ flex: 1, marginLeft: 8, borderColor: theme.custom.colors.warning }} textStyle={{ color: theme.custom.colors.warning }} />
               </View>
-            </PermissionGuard>
+            </View>
           )}
           
           {visit.status === VisitStatus.APPROVED && (
@@ -326,7 +404,19 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: 8,
     resizeMode: 'contain',
-    backgroundColor: '#000',
+    backgroundColor: '#F8FAFC',
+  },
+  documentPlaceholder: {
+    height: 160,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  documentPlaceholderText: {
+    marginTop: 8,
+    fontSize: 13,
   },
   timelineSection: {
     padding: 24,

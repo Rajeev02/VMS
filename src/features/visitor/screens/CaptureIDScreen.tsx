@@ -9,6 +9,7 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { VisitorRepository } from '../../visitor/VisitorRepository';
 import { ServiceLocator } from '../../../core/di/ServiceLocator';
+import { resetToDashboard } from '../../../navigation/navigationHelpers';
 
 export const CaptureIDScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -102,8 +103,10 @@ export const CaptureIDScreen = () => {
         idCardLocalUri: idCardUrl,
       };
       
-      const { visitor, visit, pass } = await useCase.execute(payload);
-      navigation.navigate('VisitorDetails', { visitId: visit.id });
+      await useCase.execute(payload);
+      Alert.alert('Registration Complete', 'Visitor profile has been created and sent for approval.', [
+        { text: 'OK', onPress: () => resetToDashboard(navigation) }
+      ]);
     } catch (error) {
       console.log('Error registering visitor:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to register visitor');
