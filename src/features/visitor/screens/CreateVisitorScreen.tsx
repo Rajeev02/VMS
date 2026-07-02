@@ -3,10 +3,10 @@ import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, useTheme } from 'react-native-paper';
 import { useNavigation } from '@react-navigation/native';
 import { AppTheme } from '../../../theme/theme';
-import { VisitorRepository } from '../VisitorRepository';
-import { NotificationService, NotificationChannel } from '../../../core/notifications/NotificationService';
 import { VisitStatus } from '../../../domain/models/enums';
 import Logger from '../../../core/logger/Logger';
+import { RegisterWalkInVisitorUseCase } from '../usecases/RegisterWalkInVisitorUseCase';
+import { ServiceLocator } from '../../../core/di/ServiceLocator';
 import * as ImagePicker from 'expo-image-picker';
 import { Image, TouchableOpacity, Alert } from 'react-native';
 import { MaterialIcons as Icon } from '@expo/vector-icons';
@@ -46,26 +46,25 @@ export const CreateVisitorScreen = () => {
     if (!name || !company) return;
     setLoading(true);
     try {
-      const { visitor, visit, pass } = await VisitorRepository.saveWalkInRegistration({
-        name,
-        company,
-        phone,
-        email,
-        photoUrl: photoUri || undefined // Would upload to Firebase Storage in a real implementation
-      }, {
-        purpose,
-        hostId: 'host-firebase-id-123', 
-      });
+      const useCase = new RegisterWalkInVisitorUseCase(
+        ServiceLocator.getStorageService(),
+        ServiceLocator.getNotificationFacade()
+      );
 
-      if (visit.status === VisitStatus.PENDING) {
-         await NotificationService.send({
-           title: 'Host Approval Required',
-           body: `${visitor.name} is waiting for your approval.`,
-           channels: [NotificationChannel.PUSH, NotificationChannel.IN_APP],
-           data: { visitId: visit.id }
-         });
-         Logger.info('Host approval requested for Walk-In');
-      }
+      const { visitor, visit, pass } = await useCase.execute({
+        visitorData: {
+          name,
+          company,
+          phone,
+          email,
+          photoUrl: photoUri || undefined // Would upload to Firebase Storage in a real implementation
+        },
+        visitData: {
+          purpose,
+          hostId: 'host-firebase-id-123', 
+        },
+        isPreApproved: false // Default to false for Reception/Guard screens
+      });
 
       navigation.goBack();
     } catch (error) {

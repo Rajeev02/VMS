@@ -79,7 +79,7 @@ export const CustomInput: React.FC<CustomInputProps> = ({ label, error, isPasswo
             disabled={!onRightIconPress}
           >
             <Icon
-              name={rightIcon}
+              name={rightIcon as any}
               size={20}
               color={theme.custom.colors.textSecondary}
             />

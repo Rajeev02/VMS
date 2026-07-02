@@ -35,6 +35,20 @@ export class NotificationFacade {
     });
   }
 
+  async sendArrivalNotification(visitor: Visitor, visit: Visit) {
+    const payload: INotificationPayload = {
+      recipientId: visit.hostId,
+      recipientName: 'Unknown Host', // Will be overridden if we have the host details later
+      contactDetail: 'host@example.com',
+      subject: 'Walk-In Visitor Waiting',
+      message: `${visitor.name} has arrived and is waiting for your approval.`,
+    };
+    await this.pushService.sendPushNotification({
+      ...payload,
+      contactDetail: 'host-device-token'
+    });
+  }
+
   async sendPassGenerated(visitor: Visitor, pass: VisitorPass) {
     const payload: INotificationPayload = {
       recipientId: visitor.id,

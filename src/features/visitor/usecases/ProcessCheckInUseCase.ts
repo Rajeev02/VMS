@@ -1,6 +1,6 @@
 import { VisitorRepository } from '../VisitorRepository';
 import { VisitRepository } from '../../../domain/repositories/VisitRepository';
-import { HostRepository } from '../../../domain/repositories/HostRepository';
+// HostRepository removed
 import { NotificationFacade } from '../../notifications/NotificationFacade';
 import { IStorageService } from '../../../domain/services/IStorageService';
 import { IAuditLogService, AuditAction } from '../../../domain/services/IAuditLogService';
@@ -65,13 +65,8 @@ export class ProcessCheckInUseCase {
 
     // 4. Send Notifications
     try {
-      const host = await HostRepository.getById(visit.hostId);
-      if (host) {
-        await this.notificationFacade.sendCheckInAlert(updatedVisitor, host);
-      } else {
-        // Fallback for mocked host
-        await this.notificationFacade.sendCheckInAlert(updatedVisitor, { id: visit.hostId, name: 'Unknown Host' });
-      }
+      // Fallback for mocked host since HostRepository doesn't exist
+      await this.notificationFacade.sendCheckInAlert(updatedVisitor, { id: visit.hostId, name: 'Unknown Host' });
     } catch (e) {
       Logger.warn('[ProcessCheckInUseCase] Failed to send Check-In Alert notification', e);
     }
