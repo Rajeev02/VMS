@@ -112,27 +112,48 @@ src/
 
 ---
 
-## Installation & Setup
+## Installation & Local Setup
 
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/your-org/enterprise-vms.git
-    cd enterprise-vms
-    ```
+### 1. Repository Setup
+Clone the repository and install the required dependencies:
+```bash
+git clone https://github.com/your-org/enterprise-vms.git
+cd enterprise-vms
+npm install
+```
 
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
+### 2. Firebase Configuration (Mandatory)
+Because this project uses native Firebase SDKs (`@react-native-firebase`), you must connect it to a real Firebase project to run it locally.
+1. Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
+2. Enable **Firestore Database** (start in Test Mode for local dev).
+3. Enable **Firebase Authentication** (Email/Password provider).
+4. Register an **Android App** and an **iOS App** in your Firebase project.
+5. Download the `google-services.json` (for Android) and `GoogleService-Info.plist` (for iOS).
+6. Place both of these files in the absolute root directory of this repository (`/enterprise-vms/`).
 
-3.  **Firebase Configuration:**
-    *   Ensure `@react-native-firebase/app` and `@react-native-firebase/firestore` are properly linked.
-    *   Place your `google-services.json` (Android) and `GoogleService-Info.plist` (iOS) in the root directory.
+### 3. Running the Application
+Since this project uses native libraries like Vision Camera, you must prebuild the app or use Expo Go if plugins allow. For the best development experience:
+```bash
+# Start the bundler and clear cache
+npx expo start --clear
 
-4.  **Run the application locally (Expo Go):**
-    ```bash
-    npx expo start
-    ```
+# Run on iOS simulator
+npm run ios
+
+# Run on Android emulator
+npm run android
+```
+
+---
+
+## Debugging & Troubleshooting
+
+If you run into issues while evaluating or running the project, check these common fixes:
+
+*   **App crashes immediately on launch**: Double-check that your `google-services.json` and `GoogleService-Info.plist` files are correctly placed in the root directory. Firebase native will crash if these are missing.
+*   **"Firestore permission denied"**: Ensure your Firestore Security Rules in the Firebase console are set to allow reads/writes (Test Mode).
+*   **Metro Bundler Cache Issues**: If you get bizarre TypeScript or module resolution errors, clear the Metro cache by running: `npx expo start -c`.
+*   **Vision Camera not working in Simulator**: The iOS simulator does not support hardware cameras. To test QR scanning, you must run the app on a physical device using `npx expo run:ios --device`.
 
 ---
 
