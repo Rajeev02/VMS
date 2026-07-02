@@ -167,6 +167,7 @@ If you run into issues while evaluating or running the project, check these comm
 
 *   **App crashes immediately on launch**: Double-check that your `google-services.json` and `GoogleService-Info.plist` files are correctly placed in the root directory. Firebase native will crash if these are missing.
 *   **"Firestore permission denied"**: Ensure your Firestore Security Rules in the Firebase console are set to allow reads/writes (Test Mode).
+*   **"The query requires an index" ([firestore/failed-precondition])**: Firestore requires composite indexes when querying multiple fields (e.g., `status` and `updatedAt`). The error in your terminal will provide a direct URL (e.g., `https://console.firebase.google.com/v1/r/project/...`). **Simply click that exact link**; it will open your Firebase console and automatically build the required index for you (it takes about 2-3 minutes to build).
 *   **Metro Bundler Cache Issues**: If you get bizarre TypeScript or module resolution errors, clear the Metro cache by running: `npx expo start -c`.
 *   **Vision Camera not working in Simulator**: The iOS simulator does not support hardware cameras. To test QR scanning, you must run the app on a physical device using `npx expo run:ios --device`.
 
