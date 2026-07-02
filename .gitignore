@@ -9,6 +9,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+# Local tooling / generated Firebase artifacts
+.claude/
+.firebase/
+
 # Native
 .kotlin/
 *.orig.*
