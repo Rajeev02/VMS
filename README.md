@@ -35,12 +35,20 @@ We support both Host Pre-Approval and Walk-In flows cleanly via the `RegisterWal
 *   **Host Pre-Approval Flow:** An employee (Host) registers a guest in advance. The system sets the visit to `APPROVED` and dynamically generates a secure `VisitorPass` with a time-limited `validUntil` window. An email/SMS notification with the QR code is sent to the guest.
 *   **Walk-in Flow:** A guest arrives without prior notice. Security or Reception creates the visitor profile. The system sets the visit to `PENDING` and **no pass is generated**. The Host receives a notification. Once the Host accepts via `ProcessApprovalUseCase`, the pass is generated.
 
-### 3. Check-In & Multi-Gate Verification
+### 3. Web-Based Digital Pass for Visitors
+Because external visitors do not download the VMS application, the system generates a secure, web-based digital pass.
+*   Once a visit is `APPROVED`, the system creates a unique cryptographic token and generates a public URL.
+*   This URL is emailed/SMS'd to the visitor. They simply tap the link to view their dynamic QR code on their mobile browser.
+*   **Live Examples:** Check out how the pass renders in a browser (works on desktop and mobile):
+    *   [Example Pass 1](https://rajeev02.github.io/vms/pass.html?token=demotoken12345)
+    *   [Example Pass 2](https://rajeev02.github.io/vms/pass.html?token=demotoken67890)
+
+### 4. Check-In & Multi-Gate Verification
 *   **Atomic Check-In:** Security scans the pass. `ValidateQrScanUseCase` ensures the pass is not `EXPIRED` or `REVOKED`. If valid, Firebase `runTransaction` securely locks the DB, setting Visit to `CHECKED_IN`.
 *   **Checkpoints:** Security at restricted areas (e.g., Server Room) scans the pass using `VerifyCheckpointUseCase`. This logs the location access in `checkpoint_logs` without checking the user out of the building.
 *   **Atomic Check-Out:** Scanning the pass upon exit permanently sets the Visit to `COMPLETED` and the VisitorPass to `EXPIRED`, completely blocking pass reuse.
 
-### 4. System Audit Logging
+### 5. System Audit Logging
 Every critical action is logged immutably via `IAuditLogService` into the `system_audit_logs` collection to satisfy SOC2/GDPR compliance. Receptionists can export this data as a CSV.
 
 ---
