@@ -9,7 +9,7 @@ import { PrimaryButton } from '../../../components/PrimaryButton';
 import { SecondaryButton } from '../../../components/SecondaryButton';
 import { VisitorRepository } from '../../visitor/VisitorRepository';
 import { ServiceLocator } from '../../../core/di/ServiceLocator';
-import { resetToDashboard } from '../../../navigation/navigationHelpers';
+import { resetToVisitors } from '../../../navigation/navigationHelpers';
 
 export const CaptureIDScreen = () => {
   const theme = useTheme<AppTheme>();
@@ -105,7 +105,7 @@ export const CaptureIDScreen = () => {
       
       await useCase.execute(payload);
       Alert.alert('Registration Complete', 'Visitor profile has been created and sent for approval.', [
-        { text: 'OK', onPress: () => resetToDashboard(navigation) }
+        { text: 'OK', onPress: () => resetToVisitors(navigation) }
       ]);
     } catch (error) {
       console.log('Error registering visitor:', error);

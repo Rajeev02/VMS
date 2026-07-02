@@ -26,6 +26,17 @@ const canRenderImageUri = (uri?: string) => {
   return !!uri && /^(https?:\/\/|file:\/\/)/i.test(uri);
 };
 
+const createNotificationFacade = () => {
+  const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
+  const { NotificationFacade } = require('../../notifications/NotificationFacade');
+  return new NotificationFacade(
+    new MockEmailService(),
+    new MockSmsService(),
+    new MockWhatsAppService(),
+    new MockPushNotificationService()
+  );
+};
+
 export const VisitorDetailsScreen = () => {
   const theme = useTheme<AppTheme>();
   const route = useRoute<any>();
@@ -75,7 +86,7 @@ export const VisitorDetailsScreen = () => {
       setLoading(true);
       if (newStatus === VisitStatus.APPROVED || newStatus === VisitStatus.REJECTED) {
         const { ProcessApprovalUseCase } = require('../usecases/ProcessApprovalUseCase');
-        const useCase = new ProcessApprovalUseCase();
+        const useCase = new ProcessApprovalUseCase(createNotificationFacade());
         await useCase.execute(visit.id, newStatus === VisitStatus.APPROVED ? 'APPROVE' : 'REJECT', visit.hostId);
       } else {
         await VisitRepository.updateVisit(visit.id, { status: newStatus });
@@ -104,7 +115,7 @@ export const VisitorDetailsScreen = () => {
     try {
       setLoading(true);
       const { ProcessApprovalUseCase } = require('../usecases/ProcessApprovalUseCase');
-      const useCase = new ProcessApprovalUseCase();
+      const useCase = new ProcessApprovalUseCase(createNotificationFacade());
       await useCase.execute(visit.id, 'APPROVE', user?.id || visit.hostId);
       setLoading(false);
       navigation.navigate('DigitalPass', { visitId: visit.id });
@@ -127,15 +138,7 @@ export const VisitorDetailsScreen = () => {
   const handleSendApprovalReminder = async () => {
     if (!visit || !visitor) return;
     try {
-      const { MockEmailService, MockSmsService, MockWhatsAppService, MockPushNotificationService } = require('../../../infrastructure/notifications/MockNotificationServices');
-      const { NotificationFacade } = require('../../notifications/NotificationFacade');
-      const facade = new NotificationFacade(
-        new MockEmailService(),
-        new MockSmsService(),
-        new MockWhatsAppService(),
-        new MockPushNotificationService()
-      );
-      await facade.sendArrivalNotification(visitor, visit);
+      await createNotificationFacade().sendArrivalNotification(visitor, visit);
       Logger.info(`[VisitorDetailsScreen] Approval reminder sent for visit=${visit.id}`);
     } catch (error) {
       Logger.error('Failed to send approval reminder', error);

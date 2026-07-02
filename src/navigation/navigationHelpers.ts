@@ -11,3 +11,17 @@ export const resetToDashboard = (navigation: any) => {
     ],
   });
 };
+
+export const resetToVisitors = (navigation: any) => {
+  navigation.reset({
+    index: 0,
+    routes: [
+      {
+        name: 'Tabs',
+        state: {
+          routes: [{ name: 'Visitors' }],
+        },
+      },
+    ],
+  });
+};
